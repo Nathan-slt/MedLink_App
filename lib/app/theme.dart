@@ -12,9 +12,17 @@ import 'package:flutter/material.dart';
 /// - `inversePrimary`     azul claro para textos sobre fundo `primary`
 /// - `tertiary*`          estado "ok/sucesso" (ex.: fila em tempo real)
 class AppTheme {
-  static const Color _primary = Color(0xFF082849);
-  static const Color _secondary = Color(0xFF0371CA);
-  static const Color _surface = Color(0xFFF0F7FF);
+  static const Color blue50 = Color(0xFFF0F7FF);
+  static const Color blue100 = Color(0xFFE0EFFE);
+  static const Color blue200 = Color(0xFFBADFFD);
+  static const Color blue300 = Color(0xFF7EC5FB);
+  static const Color blue400 = Color(0xFF39A8F7);
+  static const Color blue500 = Color(0xFF0F8DE8);
+  static const Color blue600 = Color(0xFF0371CA);
+  static const Color blue700 = Color(0xFF0458A0);
+  static const Color blue800 = Color(0xFF084B84);
+  static const Color blue900 = Color(0xFF0C406E);
+  static const Color blue950 = Color(0xFF082849);
 
   static final ThemeData lightTheme = ThemeData(
     fontFamily: 'Inter',
@@ -25,16 +33,18 @@ class AppTheme {
       },
     ),
     colorScheme: ColorScheme.fromSeed(
-      seedColor: _primary,
-      primary: _primary,
+      seedColor: blue950,
+      primary: blue950,
       onPrimary: Colors.white,
-      secondary: _secondary,
+      secondary: blue600,
       onSecondary: Colors.white,
-      surface: _surface,
-      onSurface: _primary,
-      primaryContainer: const Color(0xFFC3D3E3),
-      onPrimaryContainer: _primary,
-      inversePrimary: const Color(0xFFC4D9ED),
+      surface: blue50,
+      onSurface: blue950,
+      primaryContainer: blue100,
+      onPrimaryContainer: blue950,
+      secondaryContainer: blue100,
+      onSecondaryContainer: blue800,
+      inversePrimary: blue300,
       tertiary: const Color(0xFF18A86F),
       onTertiary: Colors.white,
       tertiaryContainer: const Color(0xFFE3F7EE),
