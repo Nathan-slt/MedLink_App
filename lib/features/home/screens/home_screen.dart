@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:projeto_final/services/auth_service.dart';
 import 'package:projeto_final/core/models/agendamento_detalhado.dart';
 import 'package:projeto_final/core/network/api_exception.dart';
 import 'package:projeto_final/core/widgets/app_bar.dart';
 import 'package:projeto_final/features/home/widgets/agendamento_card.dart';
 import 'package:projeto_final/features/home/widgets/calendario.dart';
 import 'package:projeto_final/services/agendamento_service.dart';
+import 'package:projeto_final/features/notificacoes/screens/notificacoes_screen.dart'; // Importe a tela de notificações que criamos
+import 'package:projeto_final/services/notificacao_push_service.dart';
 
 /// Aba "Início". O rodapé e o botão de criar agendamento ficam no
 /// [MainShellScreen].
@@ -26,6 +29,9 @@ class _HomeScreenState extends State<HomeScreen> {
     // Recarrega quando um agendamento é criado, cancelado ou remarcado.
     AgendamentoService.alteracoes.addListener(_carregar);
     _carregar();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PushNotificationService.instance.abrirNotificacaoInicialSeNecessario();
+    });
   }
 
   @override
@@ -92,13 +98,46 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 5),
-                    const Text(
-                      'Meus agendamentos',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+
+                    // --- BOTÃO DE NOTIFICAÇÕES ADICIONADO AQUI AO LADO DO TÍTULO ---
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Meus agendamentos',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.notifications_outlined),
+                          onPressed: () {
+                            final token = AuthService.instance.sessao?.token;
+                            if (token == null || token.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Não foi possível identificar sua sessão. Faça login novamente.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    TelaNotificacoes(tokenJwt: token),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
+
+                    // -----------------------------------------------------------------
                     const Text(
                       'Próxima consulta:',
                       style: TextStyle(fontSize: 14),

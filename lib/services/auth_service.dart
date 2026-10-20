@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:projeto_final/core/auth/sessao.dart';
 import 'package:projeto_final/core/models/usuario.dart';
 import 'package:projeto_final/core/network/api_client.dart';
 import 'package:projeto_final/core/network/api_exception.dart';
 import 'package:projeto_final/core/storage/armazenamento_local.dart';
 import 'package:projeto_final/core/utils/mascaras.dart';
+import 'package:projeto_final/services/notificacao_push_service.dart';
 
 /// Login, logout e restauração da sessão.
 class AuthService {
@@ -112,6 +114,7 @@ class AuthService {
 
       _sessao = sessao;
       _api.token = sessao.token;
+      await _registrarPushSemBloquearSessao();
       return true;
     } catch (_) {
       return false;
@@ -119,6 +122,13 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    try {
+      await PushNotificationService.instance.removerDispositivo();
+    } catch (erro, stackTrace) {
+      debugPrint('Falha ao remover o dispositivo do serviço de push: $erro');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
     _sessao = null;
     _api.token = null;
     try {
@@ -133,5 +143,15 @@ class AuthService {
     _sessao = sessao;
     _api.token = sessao.token;
     await _armazenamento.salvarToken(sessao.token);
+    await _registrarPushSemBloquearSessao();
+  }
+
+  Future<void> _registrarPushSemBloquearSessao() async {
+    try {
+      await PushNotificationService.instance.registrarDispositivo();
+    } catch (erro, stackTrace) {
+      debugPrint('Falha ao registrar o dispositivo para notificações push: $erro');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 }

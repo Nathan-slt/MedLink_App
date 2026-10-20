@@ -54,12 +54,28 @@ class ApiClient {
     return _enviar('PATCH', caminho, corpo: corpo, autenticado: autenticado);
   }
 
+  Future<dynamic> delete(
+    String caminho, {
+    Object? corpo,
+    bool autenticado = true,
+    bool tratarSessaoExpirada = true,
+  }) {
+    return _enviar(
+      'DELETE',
+      caminho,
+      corpo: corpo,
+      autenticado: autenticado,
+      tratarSessaoExpirada: tratarSessaoExpirada,
+    );
+  }
+
   Future<dynamic> _enviar(
     String metodo,
     String caminho, {
     Map<String, String>? query,
     Object? corpo,
     required bool autenticado,
+    bool tratarSessaoExpirada = true,
   }) async {
     final uri = Uri.parse('$_baseUrl$caminho').replace(queryParameters: query);
     final tokenAtual = token;
@@ -76,6 +92,7 @@ class ApiClient {
       'GET' => _http.get(uri, headers: headers),
       'POST' => _http.post(uri, headers: headers, body: corpoJson),
       'PATCH' => _http.patch(uri, headers: headers, body: corpoJson),
+      'DELETE' => _http.delete(uri, headers: headers, body: corpoJson),
       _ => throw ArgumentError('Método HTTP não suportado: $metodo'),
     };
 
@@ -93,12 +110,17 @@ class ApiClient {
       );
     }
 
-    return _tratarResposta(resposta, autenticado: autenticado);
+    return _tratarResposta(
+      resposta,
+      autenticado: autenticado,
+      tratarSessaoExpirada: tratarSessaoExpirada,
+    );
   }
 
   Future<dynamic> _tratarResposta(
     http.Response resposta, {
     required bool autenticado,
+    required bool tratarSessaoExpirada,
   }) async {
     final status = resposta.statusCode;
     final corpo = _decodificar(resposta);
@@ -106,7 +128,9 @@ class ApiClient {
     if (status >= 200 && status < 300) return corpo;
 
     if (status == 401 && autenticado) {
-      if (token != null) await onSessaoExpirada?.call();
+      if (token != null && tratarSessaoExpirada) {
+        await onSessaoExpirada?.call();
+      }
       throw const ApiException(
         'Sua sessão expirou. Faça login novamente.',
         statusCode: 401,

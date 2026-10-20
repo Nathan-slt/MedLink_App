@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:projeto_final/features/notificacoes/screens/notificacoes_screen.dart';
 import 'package:projeto_final/app/routes.dart';
 import 'package:projeto_final/services/auth_service.dart';
 
@@ -13,6 +14,15 @@ class AppNavigator {
       GlobalKey<ScaffoldMessengerState>();
 
   static bool _encerrando = false;
+
+  static void abrirNotificacoes() {
+    final token = AuthService.instance.sessao?.token;
+    if (token == null || token.isEmpty) return;
+
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (_) => TelaNotificacoes(tokenJwt: token)),
+    );
+  }
 
   /// Encerra a sessão e volta ao login. Ligado ao `ApiClient.onSessaoExpirada`.
   static Future<void> sessaoExpirada() async {
