@@ -54,8 +54,8 @@ class PerfilService {
     String? email,
   }) async {
     final corpo = <String, String>{
-      if (nome != null) 'nome': nome,
-      if (email != null) 'email': email,
+      'nome': ?nome,
+      'email': ?email,
     };
     await _api.patch('/usuarios/$idUsuario', corpo: corpo);
   }

@@ -90,4 +90,63 @@ void main() {
     );
     expect(calendario.calendarStyle.markerMargin.top, 1);
   });
+
+  testWidgets('não mostra consultas finalizadas na Home', (tester) async {
+    final hoje = DateTime.now();
+    AgendamentoDetalhado consulta({
+      required int id,
+      required String medico,
+      required StatusAgendamento status,
+    }) {
+      return AgendamentoDetalhado(
+        agendamento: Agendamento(
+          idAgendamento: id,
+          idPaciente: 1,
+          idProfissional: 1,
+          idClinica: 1,
+          idHorario: id,
+          dataHoraConsulta: hoje,
+          status: status,
+          criadoPorUsuario: 1,
+        ),
+        medico: medico,
+        especialidade: 'Especialidade',
+        clinica: 'Clínica',
+      );
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('pt', 'BR'),
+        supportedLocales: const [Locale('pt', 'BR')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: Calendario(
+              agendamentos: [
+                consulta(
+                  id: 1,
+                  medico: 'Dr. Atendimento finalizado',
+                  status: StatusAgendamento.realizado,
+                ),
+                consulta(
+                  id: 2,
+                  medico: 'Dra. Consulta ativa',
+                  status: StatusAgendamento.agendado,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('agendamento-card-1')), findsNothing);
+    expect(find.byKey(const ValueKey('agendamento-card-2')), findsOneWidget);
+  });
 }

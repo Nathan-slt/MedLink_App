@@ -11,11 +11,30 @@ enum StatusAgendamento {
   const StatusAgendamento(this.valor);
 
   static StatusAgendamento fromJson(String valor) {
-    return values.firstWhere(
-      (status) => status.valor == valor,
-      orElse: () =>
-          throw FormatException('Status de agendamento inválido: $valor'),
-    );
+    final normalizado = valor
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp('[áàâãä]'), 'a')
+        .replaceAll(RegExp('[éèêë]'), 'e')
+        .replaceAll(RegExp('[íìîï]'), 'i')
+        .replaceAll(RegExp('[óòôõö]'), 'o')
+        .replaceAll(RegExp('[úùûü]'), 'u')
+        .replaceAll(RegExp(r'[\s-]+'), '_');
+
+    return switch (normalizado) {
+      'agendado' || 'agendada' => StatusAgendamento.agendado,
+      'remarcado' || 'remarcada' => StatusAgendamento.remarcado,
+      'cancelado' || 'cancelada' => StatusAgendamento.cancelado,
+      'realizado' ||
+      'realizada' ||
+      'atendido' ||
+      'atendida' ||
+      'finalizado' ||
+      'finalizada' ||
+      'concluido' ||
+      'concluida' => StatusAgendamento.realizado,
+      _ => throw FormatException('Status de agendamento inválido: $valor'),
+    };
   }
 }
 

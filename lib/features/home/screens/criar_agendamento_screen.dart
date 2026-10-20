@@ -382,6 +382,22 @@ class _CriarAgendamentoScreenState extends State<CriarAgendamentoScreen> {
                           ? null
                           : _selecionarEspecialidade,
                     ),
+                    if (_erroEspecialidades != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _erroEspecialidades!,
+                        style: TextStyle(color: scheme.error),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _carregarEspecialidades,
+                          child: const Text(
+                            'Tentar carregar especialidades novamente',
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
 
                     // A key recria o campo (e limpa a seleção) quando a

@@ -6,6 +6,7 @@ import 'package:projeto_final/core/models/clinica.dart';
 import 'package:projeto_final/core/models/especialidade.dart';
 import 'package:projeto_final/core/models/horario_disponivel.dart';
 import 'package:projeto_final/core/models/profissional.dart';
+import 'package:projeto_final/core/network/api_exception.dart';
 import 'package:projeto_final/features/home/screens/criar_agendamento_screen.dart';
 import 'package:projeto_final/services/agendamento_service.dart';
 
@@ -17,62 +18,68 @@ class _AgendamentoServiceFake extends AgendamentoService {
   int? clinicaAgendada;
   int? horarioAgendado;
   DateTime? dataHoraAgendada;
+  bool falharEspecialidades = false;
 
   @override
   Future<List<Clinica>> listarClinicas() async => const [
-        Clinica(idClinica: 1, nome: 'Clínica Centro'),
-        Clinica(idClinica: 2, nome: 'Clínica Sul'),
-      ];
+    Clinica(idClinica: 1, nome: 'Clínica Centro'),
+    Clinica(idClinica: 2, nome: 'Clínica Sul'),
+  ];
 
   @override
-  Future<List<Especialidade>> listarEspecialidades() async => const [
-        Especialidade(idEspecialidade: 1, nome: 'Oftalmologia'),
-        Especialidade(idEspecialidade: 2, nome: 'Cardiologia'),
-      ];
+  Future<List<Especialidade>> listarEspecialidades() async {
+    if (falharEspecialidades) {
+      throw const ApiException('Falha ao carregar especialidades.');
+    }
+    return const [
+      Especialidade(idEspecialidade: 1, nome: 'Oftalmologia'),
+      Especialidade(idEspecialidade: 2, nome: 'Cardiologia'),
+    ];
+  }
 
   @override
   Future<List<Profissional>> listarProfissionais({
     required int idEspecialidade,
     required int idClinica,
   }) async => [
-        Profissional(
-          idProfissional: idEspecialidade == 1 ? 10 : 20,
-          nome: idEspecialidade == 1 ? 'Dr. Tom Holland' : 'Dr. Carlos Lima',
-          idEspecialidade: idEspecialidade,
-          registroProfissional: 'CRM-123',
-          idClinica: idClinica,
-        ),
-      ];
+    Profissional(
+      idProfissional: idEspecialidade == 1 ? 10 : 20,
+      nome: idEspecialidade == 1 ? 'Dr. Tom Holland' : 'Dr. Carlos Lima',
+      idEspecialidade: idEspecialidade,
+      registroProfissional: 'CRM-123',
+      idClinica: idClinica,
+    ),
+  ];
 
   @override
   Future<List<HorarioDisponivel>> listarHorariosDisponiveis(
     int idProfissional,
   ) async => [
-        HorarioDisponivel(
-          idHorario: 100,
-          idProfissional: idProfissional,
-          data: dataDisponivel,
-          horaInicio: '08:00:00',
-          horaFim: '08:30:00',
-          disponivel: true,
-        ),
-        HorarioDisponivel(
-          idHorario: 101,
-          idProfissional: idProfissional,
-          data: dataDisponivel,
-          horaInicio: '08:30:00',
-          horaFim: '09:00:00',
-          disponivel: false,
-        ),
-        HorarioDisponivel(
-          idHorario: 102,
-          idProfissional: idProfissional,
-          data: dataDisponivel.add(const Duration(days: 1)),
-          horaInicio: '10:00:00',
-          horaFim: '10:30:00',
-          disponivel: true,
-        ),
-      ];
+    HorarioDisponivel(
+      idHorario: 100,
+      idProfissional: idProfissional,
+      data: dataDisponivel,
+      horaInicio: '08:00:00',
+      horaFim: '08:30:00',
+      disponivel: true,
+    ),
+    HorarioDisponivel(
+      idHorario: 101,
+      idProfissional: idProfissional,
+      data: dataDisponivel,
+      horaInicio: '08:30:00',
+      horaFim: '09:00:00',
+      disponivel: false,
+    ),
+    HorarioDisponivel(
+      idHorario: 102,
+      idProfissional: idProfissional,
+      data: dataDisponivel.add(const Duration(days: 1)),
+      horaInicio: '10:00:00',
+      horaFim: '10:30:00',
+      disponivel: true,
+    ),
+  ];
 
   @override
   Future<void> criarAgendamento({
@@ -93,7 +100,9 @@ void main() {
   late _AgendamentoServiceFake servicoFake;
 
   setUp(() {
-    final data = DateUtils.dateOnly(DateTime.now().add(const Duration(days: 1)));
+    final data = DateUtils.dateOnly(
+      DateTime.now().add(const Duration(days: 1)),
+    );
     servicoFake = _AgendamentoServiceFake(data);
     AgendamentoService.instance = servicoFake;
   });
@@ -146,8 +155,31 @@ void main() {
     expect(find.text('Clínica Sul'), findsOneWidget);
   });
 
-  testWidgets('a lista de profissionais depende da especialidade',
-      (tester) async {
+  testWidgets('exibe erro de especialidades e permite tentar novamente', (
+    tester,
+  ) async {
+    telaDeCelular(tester);
+    servicoFake.falharEspecialidades = true;
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Falha ao carregar especialidades.'), findsOneWidget);
+    expect(
+      find.text('Tentar carregar especialidades novamente'),
+      findsOneWidget,
+    );
+
+    servicoFake.falharEspecialidades = false;
+    await tester.tap(find.text('Tentar carregar especialidades novamente'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Falha ao carregar especialidades.'), findsNothing);
+    expect(find.text('Selecione a especialidade médica'), findsOneWidget);
+  });
+
+  testWidgets('a lista de profissionais depende da especialidade', (
+    tester,
+  ) async {
     telaDeCelular(tester);
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
@@ -169,8 +201,9 @@ void main() {
     expect(find.text('Dr. Carlos Lima'), findsNothing);
   });
 
-  testWidgets('mostra só horários livres da data e envia o slot selecionado',
-      (tester) async {
+  testWidgets('mostra só horários livres da data e envia o slot selecionado', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1080, 2880);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);

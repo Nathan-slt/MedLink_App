@@ -38,4 +38,24 @@ void main() {
 
     expect(taps, [1, 2, 3]);
   });
+
+  testWidgets('mostra confirmação quando o usuário está na fila',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: Scaffold(
+          bottomNavigationBar: Rodape(
+            currentIndex: 0,
+            usuarioNaFila: true,
+            onTap: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.done), findsOneWidget);
+    expect(find.bySemanticsLabel('Fila, você está na fila'), findsOneWidget);
+  });
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:projeto_final/core/models/agendamento.dart';
 import 'package:projeto_final/core/models/agendamento_detalhado.dart';
 import 'package:projeto_final/core/utils/mascaras.dart';
 import 'package:projeto_final/features/home/widgets/agendamento_card.dart';
@@ -22,10 +21,10 @@ class _CalendarioState extends State<Calendario> {
 
   CalendarFormat _calendarFormat = CalendarFormat.month;
 
-  /// Consultas de um dia (sem as canceladas), em ordem de horário.
+  /// Consultas ativas de um dia, em ordem de horário.
   List<AgendamentoDetalhado> _doDia(DateTime dia) {
     return widget.agendamentos
-        .where((c) => c.status != StatusAgendamento.cancelado)
+        .where((c) => c.ativo)
         .where((c) => isSameDay(c.data, dia))
         .toList();
   }

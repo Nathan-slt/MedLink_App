@@ -3,7 +3,24 @@ import 'package:projeto_final/core/models/agendamento.dart';
 import 'package:projeto_final/core/models/agendamento_detalhado.dart';
 
 void main() {
-  test('aplica três horas ao horário do agendamento', () {
+  test('normaliza variantes de status finalizado da API', () {
+    for (final valor in ['realizado', 'Finalizada', 'concluída', 'ATENDIDA']) {
+      final agendamento = Agendamento.fromJson({
+        'id_agendamento': 1,
+        'id_paciente': 2,
+        'id_profissional': 3,
+        'id_clinica': 4,
+        'id_horario': 5,
+        'data_hora_consulta': '2026-10-06T10:00:00.000Z',
+        'status': valor,
+        'criado_por_usuario': 6,
+      });
+
+      expect(agendamento.status, StatusAgendamento.realizado);
+    }
+  });
+
+  test('restaura o horário de Brasília após a conversão da API', () {
     final horarioRecebido = DateTime(2026, 10, 6, 10);
     final agendamento = Agendamento(
       idAgendamento: 1,
@@ -21,7 +38,7 @@ void main() {
       clinica: 'Clínica',
     );
 
-    expect(detalhado.data, DateTime(2026, 10, 6, 13));
+    expect(detalhado.data, horarioRecebido.add(const Duration(hours: 3)));
     expect(agendamento.dataHoraConsulta, horarioRecebido);
   });
 }
