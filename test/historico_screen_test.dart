@@ -39,6 +39,29 @@ AgendamentoDetalhado _criarAgendamento({
   );
 }
 
+AgendamentoDetalhado _agendamentoFinalizadoPelaApi({
+  required int id,
+  required String medico,
+  required DateTime data,
+}) {
+  return AgendamentoDetalhado(
+    agendamento: Agendamento.fromJson({
+      'id_agendamento': id,
+      'id_paciente': 1,
+      'id_profissional': id,
+      'id_clinica': 1,
+      'id_horario': id,
+      'data_hora_consulta': data.toUtc().toIso8601String(),
+      'status': 'finalizado',
+      'criado_por_usuario': 1,
+    }),
+    medico: medico,
+    especialidade: 'Clínica geral',
+    clinica: 'Clínica MedLink',
+    endereco: 'Rua Central, 100',
+  );
+}
+
 void main() {
   final servicoOriginal = AgendamentoService.instance;
   tearDown(() => AgendamentoService.instance = servicoOriginal);
@@ -52,11 +75,10 @@ void main() {
 
       final agora = DateTime.now();
       AgendamentoService.instance = _AgendamentoServiceFake([
-        _criarAgendamento(
+        _agendamentoFinalizadoPelaApi(
           id: 1,
           medico: 'Dra. Consulta recente',
           data: agora.subtract(const Duration(days: 1)),
-          status: StatusAgendamento.realizado,
         ),
         _criarAgendamento(
           id: 2,

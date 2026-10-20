@@ -5,7 +5,7 @@ import 'package:projeto_final/core/models/agendamento.dart';
 /// A API devolve o agendamento só com IDs (profissional, clínica); o
 /// `AgendamentoService` junta com as listas de profissionais e clínicas.
 class AgendamentoDetalhado {
-  static const Duration _ajusteFusoApi = Duration(hours: 3);
+  static const Duration _diferencaParaBrasilia = Duration(hours: 3);
 
   final Agendamento agendamento;
   final String medico;
@@ -21,8 +21,9 @@ class AgendamentoDetalhado {
     this.endereco,
   });
 
-  /// Data e hora da consulta, no fuso do aparelho.
-  DateTime get data => agendamento.dataHoraConsulta.add(_ajusteFusoApi);
+  /// A API envia o horário de Brasília com sufixo UTC; restaura as 3h removidas
+  /// pela conversão para o fuso local feita em [Agendamento.fromJson].
+  DateTime get data => agendamento.dataHoraConsulta.add(_diferencaParaBrasilia);
 
   StatusAgendamento get status => agendamento.status;
 

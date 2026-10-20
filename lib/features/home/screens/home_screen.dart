@@ -56,11 +56,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Primeira consulta que ainda vai acontecer (a lista vem em ordem de data).
+  /// Próximo agendamento ativo, em ordem de data.
   AgendamentoDetalhado? get _proxima {
     final agora = DateTime.now();
     for (final consulta in _consultas) {
-      if (consulta.ativo && !consulta.data.isBefore(agora)) return consulta;
+      if (consulta.ativo && consulta.data.isAfter(agora)) return consulta;
     }
     return null;
   }

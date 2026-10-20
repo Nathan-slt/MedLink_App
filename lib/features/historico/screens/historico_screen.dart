@@ -64,7 +64,8 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     final termo = _busca.trim().toLowerCase();
 
     return _consultas.where((consulta) {
-      final correspondeAoTexto = termo.isEmpty ||
+      final correspondeAoTexto =
+          termo.isEmpty ||
           [
             consulta.medico,
             consulta.especialidade,
@@ -72,7 +73,8 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
             consulta.clinica,
             consulta.endereco,
           ].any((campo) => campo.toLowerCase().contains(termo));
-      final correspondeAoDia = _diaSelecionado == null ||
+      final correspondeAoDia =
+          _diaSelecionado == null ||
           DateUtils.isSameDay(consulta.data, _diaSelecionado);
 
       return correspondeAoTexto && correspondeAoDia;
@@ -124,15 +126,20 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     try {
       final agendamentos = await AgendamentoService.instance.listarMeus();
       final agora = DateTime.now();
-      final consultas = agendamentos
-          .where((agendamento) =>
-              agendamento.status != StatusAgendamento.cancelado)
-          .where((agendamento) =>
-              agendamento.status == StatusAgendamento.realizado ||
-              !agendamento.data.isAfter(agora))
-          .map(Consulta.fromAgendamento)
-          .toList()
-        ..sort((a, b) => b.data.compareTo(a.data));
+      final consultas =
+          agendamentos
+              .where(
+                (agendamento) =>
+                    agendamento.status != StatusAgendamento.cancelado,
+              )
+              .where(
+                (agendamento) =>
+                    agendamento.status == StatusAgendamento.realizado ||
+                    !agendamento.data.isAfter(agora),
+              )
+              .map(Consulta.fromAgendamento)
+              .toList()
+            ..sort((a, b) => b.data.compareTo(a.data));
 
       if (!mounted) return;
       setState(() {
@@ -164,14 +171,16 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'Últimas consultas',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
               ),
               Padding(
-                padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 12),
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  0,
+                  horizontalPadding,
+                  12,
+                ),
                 child: Column(
                   children: [
                     TextField(
@@ -205,8 +214,8 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                               _diaSelecionado == null
                                   ? 'Filtrar por dia'
                                   : '${_diaSelecionado!.day.toString().padLeft(2, '0')}/'
-                                      '${_diaSelecionado!.month.toString().padLeft(2, '0')}/'
-                                      '${_diaSelecionado!.year}',
+                                        '${_diaSelecionado!.month.toString().padLeft(2, '0')}/'
+                                        '${_diaSelecionado!.year}',
                             ),
                           ),
                         ),
@@ -272,12 +281,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     }
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        0,
-        horizontalPadding,
-        16,
-      ),
+      padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 16),
       children: [
         for (final grupo in grupos.entries) ...[
           Padding(
@@ -288,9 +292,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                   child: Text(
                     _rotuloDia(grupo.key),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ),
                 Text(
