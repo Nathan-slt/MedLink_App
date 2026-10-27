@@ -14,6 +14,7 @@ class AgendamentoCard extends StatelessWidget {
     final onPrimary = scheme.onPrimary;
     final data = consulta.data;
     final cardId = consulta.agendamento.idAgendamento;
+    final atrasada = consulta.ativo && data.isBefore(DateTime.now());
 
     return Container(
       key: ValueKey('agendamento-card-$cardId'),
@@ -84,6 +85,43 @@ class AgendamentoCard extends StatelessWidget {
                                 fontSize: 14,
                               ),
                             ),
+                            if (atrasada) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                key: ValueKey('agendamento-atrasado-$cardId'),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: scheme.errorContainer,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.warning_amber_rounded,
+                                      size: 14,
+                                      color: scheme.onErrorContainer,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        'Atrasada - atendimento não concluído',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: scheme.onErrorContainer,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

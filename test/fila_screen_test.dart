@@ -72,7 +72,7 @@ void main() {
     },
   );
 
-  testWidgets('mostra cartão chamado e barra de progresso de 30 segundos', (
+  testWidgets('mostra cartão chamado e barra de progresso de 40 segundos', (
     tester,
   ) async {
     final service = _FilaServiceFake(
@@ -93,7 +93,7 @@ void main() {
     expect(find.text('Dr. Felipe Rodrigues'), findsOneWidget);
     expect(find.text('Psiquiatria'), findsOneWidget);
     expect(find.text('P823'), findsOneWidget);
-    expect(find.text('Iniciando atendimento em 30s'), findsOneWidget);
+    expect(find.text('Iniciando atendimento em 40s'), findsOneWidget);
     final progress = tester.widget<LinearProgressIndicator>(
       find.byKey(const ValueKey('chamada-progress')),
     );
@@ -109,7 +109,7 @@ void main() {
     );
   });
 
-  testWidgets('após 30 segundos no chamado abre a tela em atendimento', (
+  testWidgets('após 40 segundos no chamado abre a tela em atendimento', (
     tester,
   ) async {
     final service = _FilaServiceFake(
@@ -128,7 +128,7 @@ void main() {
 
     expect(find.text('CHAMANDO PACIENTE'), findsOneWidget);
     expect(find.text('P823'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 29));
+    await tester.pump(const Duration(seconds: 39));
     expect(find.text('Em atendimento'), findsNothing);
     expect(find.text('Iniciando atendimento em 1s'), findsOneWidget);
     await tester.pump(const Duration(seconds: 1));
@@ -171,6 +171,34 @@ void main() {
 
     expect(finalizado, isTrue);
     expect(emAtendimento, isFalse);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('reconhece status de conclusão com acento', (tester) async {
+    final service = _FilaServiceFake(
+      const FilaPosicao(
+        codigoAtendimento: 'P823',
+        status: 'concluído',
+        posicao: 1,
+        profissional: 'Dr. Felipe Rodrigues',
+        especialidade: 'Psiquiatria',
+      ),
+    );
+    var finalizado = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FilaScreen(
+          isActive: false,
+          keepPolling: true,
+          service: service,
+          onConsultationCompleted: () => finalizado = true,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(finalizado, isTrue);
     await tester.pumpWidget(const SizedBox());
   });
 }

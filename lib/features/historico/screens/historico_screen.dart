@@ -6,6 +6,8 @@ import 'package:projeto_final/features/historico/models/consulta.dart';
 import 'package:projeto_final/features/historico/widgets/consulta_card.dart';
 import 'package:projeto_final/services/agendamento_service.dart';
 
+enum _FiltroPeriodo { todos, semana, dia, mes }
+
 /// Aba "Histórico". O rodapé fica no [MainShellScreen].
 class HistoricoScreen extends StatefulWidget {
   const HistoricoScreen({super.key});
@@ -44,7 +46,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   String? _erro;
   final TextEditingController _buscaController = TextEditingController();
   String _busca = '';
-  DateTime? _diaSelecionado;
+  DateTime _dataReferencia = DateTime.now();
+  _FiltroPeriodo _filtroPeriodo = _FiltroPeriodo.todos;
+  bool _somenteAtrasadas = false;
 
   @override
   void initState() {
@@ -73,26 +77,66 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
             consulta.clinica,
             consulta.endereco,
           ].any((campo) => campo.toLowerCase().contains(termo));
-      final correspondeAoDia =
-          _diaSelecionado == null ||
-          DateUtils.isSameDay(consulta.data, _diaSelecionado);
+      final correspondeAoPeriodo = switch (_filtroPeriodo) {
+        _FiltroPeriodo.todos => true,
+        _FiltroPeriodo.dia => DateUtils.isSameDay(
+          consulta.data,
+          _dataReferencia,
+        ),
+        _FiltroPeriodo.semana => _estaNaSemana(consulta.data),
+        _FiltroPeriodo.mes =>
+          consulta.data.year == _dataReferencia.year &&
+              consulta.data.month == _dataReferencia.month,
+      };
+      final correspondeAoStatus = _somenteAtrasadas
+          ? consulta.atrasada
+          : consulta.finalizada;
 
-      return correspondeAoTexto && correspondeAoDia;
+      return correspondeAoTexto && correspondeAoPeriodo && correspondeAoStatus;
     }).toList();
   }
 
-  Future<void> _selecionarDia() async {
-    final hoje = DateUtils.dateOnly(DateTime.now());
+  DateTime _inicioDaSemana(DateTime data) {
+    final dia = DateUtils.dateOnly(data);
+    return dia.subtract(Duration(days: dia.weekday - DateTime.monday));
+  }
+
+  bool _estaNaSemana(DateTime data) {
+    final inicio = _inicioDaSemana(_dataReferencia);
+    final fim = inicio.add(const Duration(days: 7));
+    final dia = DateUtils.dateOnly(data);
+    return !dia.isBefore(inicio) && dia.isBefore(fim);
+  }
+
+  String _formatarDataCurta(DateTime data) =>
+      '${data.day.toString().padLeft(2, '0')}/'
+      '${data.month.toString().padLeft(2, '0')}';
+
+  String get _rotuloDataReferencia {
+    return switch (_filtroPeriodo) {
+      _FiltroPeriodo.todos => '',
+      _FiltroPeriodo.dia =>
+        '${_formatarDataCurta(_dataReferencia)}/${_dataReferencia.year}',
+      _FiltroPeriodo.semana =>
+        '${_formatarDataCurta(_inicioDaSemana(_dataReferencia))} - '
+            '${_formatarDataCurta(_inicioDaSemana(_dataReferencia).add(const Duration(days: 6)))}/'
+            '${_dataReferencia.year}',
+      _FiltroPeriodo.mes =>
+        '${_meses[_dataReferencia.month - 1]} ${_dataReferencia.year}',
+    };
+  }
+
+  Future<void> _selecionarDataReferencia() async {
     final dia = await showDatePicker(
       context: context,
-      initialDate: _diaSelecionado ?? hoje,
+      initialDate: _dataReferencia,
       firstDate: DateTime(1900),
       lastDate: DateTime(2100),
-      helpText: 'Filtrar consultas por dia',
+      helpText: 'Escolher referência do período',
     );
 
     if (dia != null && mounted) {
-      setState(() => _diaSelecionado = dia);
+      setState(() => _dataReferencia = dia);
     }
   }
 
@@ -100,7 +144,9 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
     _buscaController.clear();
     setState(() {
       _busca = '';
-      _diaSelecionado = null;
+      _dataReferencia = DateTime.now();
+      _filtroPeriodo = _FiltroPeriodo.todos;
+      _somenteAtrasadas = false;
     });
   }
 
@@ -125,19 +171,20 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
 
     try {
       final agendamentos = await AgendamentoService.instance.listarMeus();
-      final agora = DateTime.now();
       final consultas =
           agendamentos
               .where(
                 (agendamento) =>
                     agendamento.status != StatusAgendamento.cancelado,
               )
-              .where(
-                (agendamento) =>
-                    agendamento.status == StatusAgendamento.realizado ||
-                    !agendamento.data.isAfter(agora),
+              .map(
+                (agendamento) => Consulta.fromAgendamento(
+                  agendamento,
+                  concluidaNaSessao: AgendamentoService.foiConcluidaNaSessao(
+                    agendamento.agendamento.idAgendamento,
+                  ),
+                ),
               )
-              .map(Consulta.fromAgendamento)
               .toList()
             ..sort((a, b) => b.data.compareTo(a.data));
 
@@ -204,28 +251,125 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Row(
+                    Wrap(
+                      alignment: WrapAlignment.start,
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _selecionarDia,
-                            icon: const Icon(Icons.calendar_today_outlined),
-                            label: Text(
-                              _diaSelecionado == null
-                                  ? 'Filtrar por dia'
-                                  : '${_diaSelecionado!.day.toString().padLeft(2, '0')}/'
-                                        '${_diaSelecionado!.month.toString().padLeft(2, '0')}/'
-                                        '${_diaSelecionado!.year}',
+                        if (screenWidth < 430)
+                          SizedBox(
+                            width: 120,
+                            height: 40,
+                            child: DropdownButtonFormField<_FiltroPeriodo>(
+                              initialValue: _filtroPeriodo,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                prefixIcon: Icon(Icons.filter_list, size: 18),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: _FiltroPeriodo.todos,
+                                  child: Text('Todos'),
+                                ),
+                                DropdownMenuItem(
+                                  value: _FiltroPeriodo.semana,
+                                  child: Text('Semana'),
+                                ),
+                                DropdownMenuItem(
+                                  value: _FiltroPeriodo.dia,
+                                  child: Text('Dia'),
+                                ),
+                                DropdownMenuItem(
+                                  value: _FiltroPeriodo.mes,
+                                  child: Text('Mês'),
+                                ),
+                              ],
+                              onChanged: (periodo) {
+                                if (periodo != null) {
+                                  setState(() => _filtroPeriodo = periodo);
+                                }
+                              },
+                            ),
+                          )
+                        else
+                          SegmentedButton<_FiltroPeriodo>(
+                            showSelectedIcon: false,
+                            style: const ButtonStyle(
+                              padding: WidgetStatePropertyAll(
+                                EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                            ),
+                            segments: const [
+                              ButtonSegment(
+                                value: _FiltroPeriodo.todos,
+                                label: Text('Todos'),
+                              ),
+                              ButtonSegment(
+                                value: _FiltroPeriodo.semana,
+                                label: Text('Semana'),
+                              ),
+                              ButtonSegment(
+                                value: _FiltroPeriodo.dia,
+                                label: Text('Dia'),
+                              ),
+                              ButtonSegment(
+                                value: _FiltroPeriodo.mes,
+                                label: Text('Mês'),
+                              ),
+                            ],
+                            selected: {_filtroPeriodo},
+                            onSelectionChanged: (selecionados) => setState(
+                              () => _filtroPeriodo = selecionados.single,
                             ),
                           ),
+                        FilterChip(
+                          visualDensity: const VisualDensity(
+                            horizontal: -2,
+                            vertical: -2,
+                          ),
+                          avatar: const Icon(
+                            Icons.warning_amber_rounded,
+                            size: 18,
+                          ),
+                          label: Text(
+                            _somenteAtrasadas ? 'Atrasadas' : 'Finalizadas',
+                          ),
+                          selected: _somenteAtrasadas,
+                          onSelected: (selecionado) =>
+                              setState(() => _somenteAtrasadas = selecionado),
                         ),
-                        if (_busca.isNotEmpty || _diaSelecionado != null) ...[
-                          const SizedBox(width: 8),
+                        if (_filtroPeriodo != _FiltroPeriodo.todos)
+                          if (screenWidth < 430)
+                            IconButton(
+                              tooltip: 'Período: $_rotuloDataReferencia',
+                              onPressed: _selecionarDataReferencia,
+                              icon: const Icon(Icons.calendar_today_outlined),
+                              visualDensity: VisualDensity.compact,
+                              constraints: const BoxConstraints.tightFor(
+                                width: 40,
+                                height: 40,
+                              ),
+                              padding: EdgeInsets.zero,
+                            )
+                          else
+                            OutlinedButton.icon(
+                              onPressed: _selecionarDataReferencia,
+                              icon: const Icon(Icons.calendar_today_outlined),
+                              label: Text(_rotuloDataReferencia),
+                            ),
+                        if (_busca.isNotEmpty ||
+                            _filtroPeriodo != _FiltroPeriodo.todos ||
+                            _somenteAtrasadas)
                           TextButton(
                             onPressed: _limparFiltros,
                             child: const Text('Limpar'),
                           ),
-                        ],
                       ],
                     ),
                   ],

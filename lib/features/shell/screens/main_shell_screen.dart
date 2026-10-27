@@ -74,12 +74,16 @@ class _MainShellScreenState extends State<MainShellScreen> {
                 }
               },
               onConsultationCompleted: () {
-                AgendamentoService.notificarAlteracao();
                 setState(() {
                   _usuarioNaFila = false;
                   _estaSendoChamado = false;
                   _estaEmAtendimento = false;
                   if (_currentIndex == 2) _currentIndex = 0;
+                });
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    AgendamentoService.notificarConclusaoConsulta();
+                  }
                 });
               },
             ), // 2

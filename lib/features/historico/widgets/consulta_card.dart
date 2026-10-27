@@ -8,8 +8,18 @@ class ConsultaCard extends StatelessWidget {
   const ConsultaCard({super.key, required this.consulta, this.onTap});
 
   static const _meses = [
-    'JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN',
-    'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ',
+    'JAN',
+    'FEV',
+    'MAR',
+    'ABR',
+    'MAI',
+    'JUN',
+    'JUL',
+    'AGO',
+    'SET',
+    'OUT',
+    'NOV',
+    'DEZ',
   ];
 
   String get _hora {
@@ -116,10 +126,41 @@ class ConsultaCard extends StatelessWidget {
               color: cor,
             ),
           ),
-          Text(
-            consulta.endereco,
-            style: TextStyle(fontSize: 12, color: cor),
-          ),
+          Text(consulta.endereco, style: TextStyle(fontSize: 12, color: cor)),
+          if (consulta.atrasada) ...[
+            const SizedBox(height: 8),
+            Container(
+              key: ValueKey('consulta-atrasada-${consulta.medico}'),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: scheme.errorContainer,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 14,
+                    color: scheme.onErrorContainer,
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      'Atrasada - não realizada',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: scheme.onErrorContainer,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

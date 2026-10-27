@@ -70,9 +70,7 @@ class Agendamento {
       // A API manda a data em UTC (ISO 8601); converte para o fuso do aparelho.
       dataHoraConsulta:
           DateTime.parse(json['data_hora_consulta'] as String).toLocal(),
-      status: StatusAgendamento.fromJson(
-        json['status'] as String? ?? StatusAgendamento.agendado.valor,
-      ),
+      status: StatusAgendamento.fromJson(json['status'] as String),
       criadoPorUsuario: json['criado_por_usuario'] as int,
     );
   }

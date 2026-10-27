@@ -19,8 +19,24 @@ class AgendamentoService {
   /// Sobe a cada mudança (criar, cancelar, remarcar). As telas que mostram
   /// agendamentos escutam isto e recarregam.
   static final ValueNotifier<int> alteracoes = ValueNotifier<int>(0);
+  static final ValueNotifier<int> conclusoes = ValueNotifier<int>(0);
+  static final Set<int> _concluidasNaSessao = {};
 
   static void notificarAlteracao() => alteracoes.value++;
+
+  static void marcarConcluidaNaSessao(int idAgendamento) {
+    _concluidasNaSessao.add(idAgendamento);
+  }
+
+  static bool foiConcluidaNaSessao(int idAgendamento) =>
+      _concluidasNaSessao.contains(idAgendamento);
+
+  static void limparConclusoesDaSessao() => _concluidasNaSessao.clear();
+
+  static void notificarConclusaoConsulta() {
+    conclusoes.value++;
+    notificarAlteracao();
+  }
 
   final ApiClient _api;
 

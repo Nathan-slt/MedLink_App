@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:projeto_final/services/auth_service.dart';
 import 'package:projeto_final/core/models/agendamento_detalhado.dart';
@@ -6,7 +7,7 @@ import 'package:projeto_final/core/widgets/app_bar.dart';
 import 'package:projeto_final/features/home/widgets/agendamento_card.dart';
 import 'package:projeto_final/features/home/widgets/calendario.dart';
 import 'package:projeto_final/services/agendamento_service.dart';
-import 'package:projeto_final/features/notificacoes/screens/notificacoes_screen.dart'; // Importe a tela de notificações que criamos
+import 'package:projeto_final/features/notificacoes/screens/notificacoes_screen.dart';
 import 'package:projeto_final/services/notificacao_push_service.dart';
 
 /// Aba "Início". O rodapé e o botão de criar agendamento ficam no
@@ -20,27 +21,63 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<AgendamentoDetalhado> _consultas = const [];
+  final Set<int> _concluidasNaSessao = {};
+  int _carregamentoAtual = 0;
   bool _carregando = true;
   String? _erro;
 
   @override
   void initState() {
     super.initState();
-    // Recarrega quando um agendamento é criado, cancelado ou remarcado.
     AgendamentoService.alteracoes.addListener(_carregar);
+    AgendamentoService.conclusoes.addListener(_marcarConsultaAtualConcluida);
     _carregar();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      PushNotificationService.instance.abrirNotificacaoInicialSeNecessario();
+      if (Firebase.apps.isNotEmpty) {
+        PushNotificationService.instance.abrirNotificacaoInicialSeNecessario();
+      }
     });
   }
 
   @override
   void dispose() {
     AgendamentoService.alteracoes.removeListener(_carregar);
+    AgendamentoService.conclusoes.removeListener(_marcarConsultaAtualConcluida);
     super.dispose();
   }
 
+  void _marcarConsultaAtualConcluida() {
+    final agora = DateTime.now();
+    final consultasDoDia = _consultasAtivas
+        .where((consulta) => DateUtils.isSameDay(consulta.data, agora))
+        .toList()
+      ..sort(
+        (a, b) => a.data
+            .difference(agora)
+            .inMicroseconds
+            .abs()
+            .compareTo(
+              b.data.difference(agora).inMicroseconds.abs(),
+            ),
+      );
+    final consulta = consultasDoDia.isNotEmpty
+        ? consultasDoDia.first
+        : _proxima;
+    if (consulta == null ||
+        _concluidasNaSessao.contains(consulta.agendamento.idAgendamento)) {
+      return;
+    }
+
+    setState(() {
+      _concluidasNaSessao.add(consulta.agendamento.idAgendamento);
+    });
+    AgendamentoService.marcarConcluidaNaSessao(
+      consulta.agendamento.idAgendamento,
+    );
+  }
+
   Future<void> _carregar() async {
+    final carregamento = ++_carregamentoAtual;
     setState(() {
       _carregando = true;
       _erro = null;
@@ -48,13 +85,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final consultas = await AgendamentoService.instance.listarMeus();
-      if (!mounted) return;
+      if (!mounted || carregamento != _carregamentoAtual) return;
       setState(() {
         _consultas = consultas;
         _carregando = false;
       });
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || carregamento != _carregamentoAtual) return;
       setState(() {
         _erro = e.mensagem;
         _carregando = false;
@@ -62,13 +99,38 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Próximo agendamento ativo, em ordem de data.
-  AgendamentoDetalhado? get _proxima {
+  List<AgendamentoDetalhado> get _consultasAtivas => _consultas
+      .where(
+        (consulta) =>
+            consulta.ativo &&
+            !_concluidasNaSessao.contains(consulta.agendamento.idAgendamento) &&
+            !AgendamentoService.foiConcluidaNaSessao(
+              consulta.agendamento.idAgendamento,
+            ),
+      )
+      .toList();
+
+  List<AgendamentoDetalhado> get _consultasAtivasEFuturas {
     final agora = DateTime.now();
-    for (final consulta in _consultas) {
-      if (consulta.ativo && consulta.data.isAfter(agora)) return consulta;
-    }
-    return null;
+    return _consultasAtivas
+        .where((consulta) => consulta.data.isAfter(agora))
+        .toList();
+  }
+
+  List<AgendamentoDetalhado> get _consultasVisiveisNoCalendario {
+    final agora = DateTime.now();
+    return _consultasAtivas
+        .where(
+          (consulta) =>
+              consulta.data.isAfter(agora) ||
+              DateUtils.isSameDay(consulta.data, agora),
+        )
+        .toList();
+  }
+
+  AgendamentoDetalhado? get _proxima {
+    final consultas = _consultasAtivasEFuturas;
+    return consultas.isEmpty ? null : consultas.first;
   }
 
   @override
@@ -81,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         onRefresh: _carregar,
         child: SingleChildScrollView(
-          // Permite "puxar para atualizar" mesmo com pouco conteúdo.
           physics: const AlwaysScrollableScrollPhysics(),
           child: Center(
             child: ConstrainedBox(
@@ -91,23 +152,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   horizontalPadding,
                   8,
                   horizontalPadding,
-                  // Espaço para o botão "+" não cobrir o fim da página.
                   48,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 5),
-
-                    // --- BOTÃO DE NOTIFICAÇÕES ADICIONADO AQUI AO LADO DO TÍTULO ---
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Meus agendamentos',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                        const Expanded(
+                          child: Text(
+                            'Meus agendamentos',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         IconButton(
@@ -136,15 +198,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-
-                    // -----------------------------------------------------------------
                     const Text(
                       'Próxima consulta:',
                       style: TextStyle(fontSize: 14),
                     ),
                     const SizedBox(height: 5),
                     _buildProxima(context),
-                    Calendario(agendamentos: _consultas),
+                    Calendario(agendamentos: _consultasVisiveisNoCalendario),
                   ],
                 ),
               ),
@@ -203,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        'Você não tem consultas agendadas.\nToque no + para agendar.',
+        'Você não tem próximas consultas agendadas.\nToque no + para agendar.',
         textAlign: TextAlign.center,
         style: TextStyle(color: scheme.primary, fontSize: 15),
       ),

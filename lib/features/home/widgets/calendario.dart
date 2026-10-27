@@ -26,12 +26,19 @@ class _CalendarioState extends State<Calendario> {
     return widget.agendamentos
         .where((c) => c.ativo)
         .where((c) => isSameDay(c.data, dia))
-        .toList();
+        .toList()
+      ..sort((a, b) => a.data.compareTo(b.data));
   }
 
   @override
   Widget build(BuildContext context) {
     final consultasDoDia = _doDia(_selectedDate);
+    final consultasDoDiaSemAtraso = consultasDoDia
+        .where((consulta) => !consulta.data.isBefore(DateTime.now()))
+        .toList();
+    final consultasAtrasadas = consultasDoDia
+        .where((consulta) => consulta.data.isBefore(DateTime.now()))
+        .toList();
     final secondary = Theme.of(context).colorScheme.secondary;
     final primary = Theme.of(context).colorScheme.primary;
 
@@ -186,11 +193,28 @@ class _CalendarioState extends State<Calendario> {
               ),
             ),
           )
-        else
-          for (final consulta in consultasDoDia) ...[
+        else ...[
+          for (final consulta in consultasDoDiaSemAtraso) ...[
             AgendamentoCard(consulta: consulta),
             const SizedBox(height: 8),
           ],
+          if (consultasAtrasadas.isNotEmpty) ...[
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.only(top: 4, bottom: 8),
+                child: Text(
+                  'Consultas atrasadas',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            for (final consulta in consultasAtrasadas) ...[
+              AgendamentoCard(consulta: consulta),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ],
       ],
     );
   }

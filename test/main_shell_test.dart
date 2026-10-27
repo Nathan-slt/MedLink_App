@@ -158,8 +158,8 @@ void main() {
     expect(find.text('Meus agendamentos'), findsNothing);
     expect(find.text('CHAMANDO PACIENTE'), findsOneWidget);
     expect(find.text('C123'), findsOneWidget);
-    expect(find.text('Iniciando atendimento em 30s'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 30));
+    expect(find.text('Iniciando atendimento em 40s'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 40));
     await tester.pump();
     expect(find.text('Em atendimento'), findsOneWidget);
     expect(find.text('C123'), findsNothing);

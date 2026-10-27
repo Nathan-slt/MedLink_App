@@ -1,3 +1,4 @@
+import 'package:projeto_final/core/models/agendamento.dart';
 import 'package:projeto_final/core/models/agendamento_detalhado.dart';
 
 /// Consulta exibida no histórico (dados já "montados" para a tela).
@@ -15,6 +16,8 @@ class Consulta {
   /// Ex.: Consultório, Telemedicina.
   final String tipoLocal;
   final String? fotoUrl;
+  final bool finalizada;
+  final bool atrasada;
 
   const Consulta({
     required this.medico,
@@ -25,9 +28,14 @@ class Consulta {
     required this.data,
     this.tipoLocal = 'Consultório',
     this.fotoUrl,
+    this.finalizada = false,
+    this.atrasada = false,
   });
 
-  factory Consulta.fromAgendamento(AgendamentoDetalhado agendamento) {
+  factory Consulta.fromAgendamento(
+    AgendamentoDetalhado agendamento, {
+    bool concluidaNaSessao = false,
+  }) {
     return Consulta(
       medico: agendamento.medico,
       especialidade: agendamento.especialidade,
@@ -36,6 +44,13 @@ class Consulta {
       endereco: agendamento.endereco ?? 'Endereço não informado',
       data: agendamento.data,
       tipoLocal: '',
+      finalizada:
+          agendamento.status == StatusAgendamento.realizado ||
+          concluidaNaSessao,
+      atrasada:
+          !concluidaNaSessao &&
+          agendamento.ativo &&
+          agendamento.data.isBefore(DateTime.now()),
     );
   }
 }

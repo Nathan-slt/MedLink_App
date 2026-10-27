@@ -33,7 +33,7 @@ class FilaScreen extends StatefulWidget {
 
 class _FilaScreenState extends State<FilaScreen> {
   static const _intervaloAtualizacao = Duration(seconds: 1);
-  static const _duracaoChamada = Duration(seconds: 30);
+  static const _duracaoChamada = Duration(seconds: 40);
 
   Timer? _timer;
   Timer? _timerChamada;
@@ -48,7 +48,15 @@ class _FilaScreenState extends State<FilaScreen> {
   bool get _deveConsultar => widget.isActive || widget.keepPolling;
 
   String? _normalizarStatus(String? status) =>
-      status?.trim().toLowerCase().replaceAll(RegExp(r'[\s-]+'), '_');
+      status
+        ?.trim()
+        .toLowerCase()
+        .replaceAll(RegExp('[áàâãä]'), 'a')
+        .replaceAll(RegExp('[éèêë]'), 'e')
+        .replaceAll(RegExp('[íìîï]'), 'i')
+        .replaceAll(RegExp('[óòôõö]'), 'o')
+        .replaceAll(RegExp('[úùûü]'), 'u')
+        .replaceAll(RegExp(r'[\s-]+'), '_');
 
   bool get _estaSendoChamado {
     final status = _normalizarStatus(_fila?.status);
@@ -66,6 +74,8 @@ class _FilaScreenState extends State<FilaScreen> {
       'finalizada' ||
       'realizado' ||
       'realizada' ||
+      'atendido' ||
+      'atendida' ||
       'concluido' ||
       'concluida' => true,
       _ => false,
