@@ -48,7 +48,6 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
   String _busca = '';
   DateTime _dataReferencia = DateTime.now();
   _FiltroPeriodo _filtroPeriodo = _FiltroPeriodo.todos;
-  bool _somenteAtrasadas = false;
 
   @override
   void initState() {
@@ -88,11 +87,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
           consulta.data.year == _dataReferencia.year &&
               consulta.data.month == _dataReferencia.month,
       };
-      final correspondeAoStatus = _somenteAtrasadas
-          ? consulta.atrasada
-          : consulta.finalizada;
-
-      return correspondeAoTexto && correspondeAoPeriodo && correspondeAoStatus;
+      return correspondeAoTexto && correspondeAoPeriodo && consulta.finalizada;
     }).toList();
   }
 
@@ -146,7 +141,6 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
       _busca = '';
       _dataReferencia = DateTime.now();
       _filtroPeriodo = _FiltroPeriodo.todos;
-      _somenteAtrasadas = false;
     });
   }
 
@@ -328,22 +322,6 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                               () => _filtroPeriodo = selecionados.single,
                             ),
                           ),
-                        FilterChip(
-                          visualDensity: const VisualDensity(
-                            horizontal: -2,
-                            vertical: -2,
-                          ),
-                          avatar: const Icon(
-                            Icons.warning_amber_rounded,
-                            size: 18,
-                          ),
-                          label: Text(
-                            _somenteAtrasadas ? 'Atrasadas' : 'Finalizadas',
-                          ),
-                          selected: _somenteAtrasadas,
-                          onSelected: (selecionado) =>
-                              setState(() => _somenteAtrasadas = selecionado),
-                        ),
                         if (_filtroPeriodo != _FiltroPeriodo.todos)
                           if (screenWidth < 430)
                             IconButton(
@@ -363,13 +341,10 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                               icon: const Icon(Icons.calendar_today_outlined),
                               label: Text(_rotuloDataReferencia),
                             ),
-                        if (_busca.isNotEmpty ||
-                            _filtroPeriodo != _FiltroPeriodo.todos ||
-                            _somenteAtrasadas)
-                          TextButton(
-                            onPressed: _limparFiltros,
-                            child: const Text('Limpar'),
-                          ),
+                        TextButton(
+                          onPressed: _limparFiltros,
+                          child: const Text('Limpar'),
+                        ),
                       ],
                     ),
                   ],
@@ -413,8 +388,21 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
 
     final consultas = _consultasFiltradas;
     if (consultas.isEmpty) {
-      return const Center(
-        child: Text('Nenhuma consulta encontrada com esses filtros.'),
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Nenhuma consulta encontrada com esses filtros.'),
+            if (_busca.isNotEmpty ||
+                _filtroPeriodo != _FiltroPeriodo.todos) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _limparFiltros,
+                child: const Text('Mostrar todo o histórico'),
+              ),
+            ],
+          ],
+        ),
       );
     }
 

@@ -76,61 +76,53 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets(
-    'mostra somente realizadas; atrasadas aparecem apenas com o filtro',
-    (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 3;
-      addTearDown(tester.view.reset);
+  testWidgets('mostra consultas finalizadas sem oferecer filtro de atrasadas', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
 
-      final agora = DateTime.now();
-      AgendamentoService.instance = _AgendamentoServiceFake([
-        _agendamentoFinalizadoPelaApi(
-          id: 1,
-          medico: 'Dra. Consulta recente',
-          data: agora.subtract(const Duration(days: 1)),
-        ),
-        _criarAgendamento(
-          id: 2,
-          medico: 'Dr. Consulta passada',
-          data: agora.subtract(const Duration(days: 3)),
-          status: StatusAgendamento.agendado,
-        ),
-        _criarAgendamento(
-          id: 3,
-          medico: 'Dr. Consulta cancelada',
-          data: agora.subtract(const Duration(days: 2)),
-          status: StatusAgendamento.cancelado,
-        ),
-        _criarAgendamento(
-          id: 4,
-          medico: 'Dr. Consulta futura',
-          data: agora.add(const Duration(days: 1)),
-          status: StatusAgendamento.agendado,
-        ),
-      ]);
+    final agora = DateTime.now();
+    AgendamentoService.instance = _AgendamentoServiceFake([
+      _agendamentoFinalizadoPelaApi(
+        id: 1,
+        medico: 'Dra. Consulta recente',
+        data: agora.subtract(const Duration(days: 1)),
+      ),
+      _criarAgendamento(
+        id: 2,
+        medico: 'Dr. Consulta passada',
+        data: agora.subtract(const Duration(days: 3)),
+        status: StatusAgendamento.agendado,
+      ),
+      _criarAgendamento(
+        id: 3,
+        medico: 'Dr. Consulta cancelada',
+        data: agora.subtract(const Duration(days: 2)),
+        status: StatusAgendamento.cancelado,
+      ),
+      _criarAgendamento(
+        id: 4,
+        medico: 'Dr. Consulta futura',
+        data: agora.add(const Duration(days: 1)),
+        status: StatusAgendamento.agendado,
+      ),
+    ]);
 
-      await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.lightTheme, home: const HistoricoScreen()),
-      );
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.lightTheme, home: const HistoricoScreen()),
+    );
+    await tester.pumpAndSettle();
 
-      expect(find.text('Dra. Consulta recente'), findsOneWidget);
-      expect(find.text('Dr. Consulta passada'), findsNothing);
-      expect(find.text('Dr. Consulta cancelada'), findsNothing);
-      expect(find.text('Dr. Consulta futura'), findsNothing);
-
-      await tester.tap(find.text('Finalizadas'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Dra. Consulta recente'), findsNothing);
-      expect(find.text('Dr. Consulta passada'), findsOneWidget);
-      expect(find.text('Atrasada - não realizada'), findsOneWidget);
-      expect(find.text('Dr. Consulta cancelada'), findsNothing);
-      expect(find.text('Dr. Consulta futura'), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(find.text('Dra. Consulta recente'), findsOneWidget);
+    expect(find.text('Dr. Consulta passada'), findsNothing);
+    expect(find.text('Dr. Consulta cancelada'), findsNothing);
+    expect(find.text('Dr. Consulta futura'), findsNothing);
+    expect(find.text('Limpar'), findsOneWidget);
+    expect(find.text('Atrasadas'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'inclui no histórico a consulta finalizada nesta sessão mesmo se a API '
@@ -200,7 +192,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('filtra somente consultas atrasadas', (tester) async {
+  testWidgets('exibe consultas finalizadas sem seletor de atrasadas', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -233,16 +227,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Todos'), findsOneWidget);
+    expect(find.text('Limpar'), findsOneWidget);
     expect(find.text('Atrasadas'), findsNothing);
-
     expect(find.text('Dr. Consulta atrasada'), findsNothing);
     expect(find.text('Dra. Consulta realizada'), findsOneWidget);
-    await tester.tap(find.text('Finalizadas'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Dr. Consulta atrasada'), findsOneWidget);
-    expect(find.text('Atrasada - não realizada'), findsOneWidget);
-    expect(find.text('Dra. Consulta realizada'), findsNothing);
     expect(find.text('Dr. Consulta futura'), findsNothing);
   });
 
@@ -303,4 +291,41 @@ void main() {
     expect(find.text('Dra. Consulta de hoje'), findsOneWidget);
     expect(find.text('Dr. Outra consulta da semana'), findsNothing);
   });
+
+  testWidgets(
+    'limpa o filtro de dia sem resultados e mostra consultas finalizadas',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      AgendamentoService.instance = _AgendamentoServiceFake([
+        _agendamentoFinalizadoPelaApi(
+          id: 30,
+          medico: 'Dra. Consulta realizada',
+          data: DateTime(2000, 10, 26, 10),
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        MaterialApp(theme: AppTheme.lightTheme, home: const HistoricoScreen()),
+      );
+      await tester.pumpAndSettle();
+
+      await selecionarPeriodo(tester, 'Dia');
+      expect(
+        find.text('Nenhuma consulta encontrada com esses filtros.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Mostrar todo o histórico'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dra. Consulta realizada'), findsOneWidget);
+      expect(
+        find.text('Nenhuma consulta encontrada com esses filtros.'),
+        findsNothing,
+      );
+    },
+  );
 }
