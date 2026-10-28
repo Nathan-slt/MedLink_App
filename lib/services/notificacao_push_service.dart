@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show DartPluginRegistrant;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -7,17 +8,107 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:projeto_final/core/network/api_client.dart';
 
 @pragma('vm:entry-point')
-Future<void> tratarMensagemEmSegundoPlano(RemoteMessage _) async {
+Future<void> tratarMensagemEmSegundoPlano(RemoteMessage mensagem) async {
+  DartPluginRegistrant.ensureInitialized();
   await Firebase.initializeApp();
+
+  // Mensagens com bloco `notification` são exibidas pelo próprio sistema
+  // quando o app está em segundo plano ou encerrado. Aqui tratamos somente
+  // mensagens data-only para não duplicar o alerta do sistema.
+  if (mensagem.notification != null) return;
+
+  final titulo = _textoNaoVazio(
+    mensagem.data['titulo'] ?? mensagem.data['title'],
+    fallback: 'MedLink',
+  );
+  final corpo = _textoNaoVazio(
+    mensagem.data['mensagem'] ?? mensagem.data['body'],
+    fallback: 'Você recebeu uma notificação.',
+  );
+  final plugin = FlutterLocalNotificationsPlugin();
+  await _inicializarNotificacoesLocais(plugin);
+  await _mostrarNotificacaoLocal(
+    plugin,
+    id: mensagem.messageId?.hashCode ?? mensagem.hashCode,
+    title: titulo,
+    body: corpo,
+    payload: mensagem.data['idNotificacao']?.toString(),
+  );
+}
+
+String _textoNaoVazio(Object? valor, {required String fallback}) {
+  final texto = valor?.toString().trim() ?? '';
+  return texto.isEmpty ? fallback : texto;
+}
+
+const _canalId = 'medlink_alertas';
+const _canalNome = 'Alertas do MedLink';
+const _descricaoCanal = 'Lembretes e atualizações de consultas.';
+
+Future<void> _inicializarNotificacoesLocais(
+  FlutterLocalNotificationsPlugin plugin,
+) async {
+  await plugin.initialize(
+    settings: const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      ),
+    ),
+  );
+  await _criarCanalAndroid(plugin);
+}
+
+Future<void> _criarCanalAndroid(FlutterLocalNotificationsPlugin plugin) async {
+  await plugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
+      ?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _canalId,
+          _canalNome,
+          description: _descricaoCanal,
+          importance: Importance.high,
+        ),
+      );
+}
+
+Future<void> _mostrarNotificacaoLocal(
+  FlutterLocalNotificationsPlugin plugin, {
+  required int id,
+  required String title,
+  required String body,
+  String? payload,
+}) {
+  return plugin.show(
+    id: id,
+    title: title,
+    body: body,
+    notificationDetails: const NotificationDetails(
+      android: AndroidNotificationDetails(
+        _canalId,
+        _canalNome,
+        channelDescription: _descricaoCanal,
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    ),
+    payload: payload,
+  );
 }
 
 class PushNotificationService {
   PushNotificationService._();
 
   static final PushNotificationService instance = PushNotificationService._();
-
-  static const _canalId = 'medlink_alertas';
-  static const _canalNome = 'Alertas do MedLink';
 
   static bool get suportaPush =>
       defaultTargetPlatform == TargetPlatform.android ||
@@ -28,6 +119,7 @@ class PushNotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _inicializado = false;
+  bool _notificacaoLocalInicial = false;
   VoidCallback? _aoAbrirNotificacao;
   RemoteMessage? _mensagemInicial;
   StreamSubscription<RemoteMessage>? _mensagensSubscription;
@@ -49,20 +141,13 @@ class PushNotificationService {
       ),
       onDidReceiveNotificationResponse: (_) => _aoAbrirNotificacao?.call(),
     );
+    final detalhesInicializacao = await _notificacoesLocais
+        .getNotificationAppLaunchDetails();
+    _notificacaoLocalInicial =
+        detalhesInicializacao?.didNotificationLaunchApp ?? false;
 
     if (defaultTargetPlatform == TargetPlatform.android) {
-      await _notificacoesLocais
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >()
-          ?.createNotificationChannel(
-            const AndroidNotificationChannel(
-              _canalId,
-              _canalNome,
-              description: 'Lembretes e atualizações de consultas.',
-              importance: Importance.high,
-            ),
-          );
+      await _criarCanalAndroid(_notificacoesLocais);
     } else {
       await _mensageria.setForegroundNotificationPresentationOptions(
         alert: true,
@@ -85,9 +170,10 @@ class PushNotificationService {
   }
 
   void abrirNotificacaoInicialSeNecessario() {
-    if (_mensagemInicial == null) return;
+    if (_mensagemInicial == null && !_notificacaoLocalInicial) return;
 
     _mensagemInicial = null;
+    _notificacaoLocalInicial = false;
     _aoAbrirNotificacao?.call();
   }
 
@@ -151,22 +237,24 @@ class PushNotificationService {
   Future<void> _mostrarMensagemEmPrimeiroPlano(RemoteMessage mensagem) async {
     if (defaultTargetPlatform != TargetPlatform.android) return;
 
-    final notificacao = mensagem.notification;
-    if (notificacao == null) return;
+    final title = _textoNaoVazio(
+      mensagem.notification?.title ??
+          mensagem.data['titulo'] ??
+          mensagem.data['title'],
+      fallback: 'MedLink',
+    );
+    final body = _textoNaoVazio(
+      mensagem.notification?.body ??
+          mensagem.data['mensagem'] ??
+          mensagem.data['body'],
+      fallback: 'Você recebeu uma notificação.',
+    );
 
-    await _notificacoesLocais.show(
+    await _mostrarNotificacaoLocal(
+      _notificacoesLocais,
       id: mensagem.messageId?.hashCode ?? mensagem.hashCode,
-      title: notificacao.title ?? 'MedLink',
-      body: notificacao.body ?? 'Você recebeu uma notificação.',
-      notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _canalId,
-          _canalNome,
-          channelDescription: 'Lembretes e atualizações de consultas.',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-      ),
+      title: title,
+      body: body,
       payload: mensagem.data['idNotificacao']?.toString(),
     );
   }

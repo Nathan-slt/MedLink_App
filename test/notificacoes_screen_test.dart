@@ -56,6 +56,16 @@ Notificacao _notificacao(int id, {bool lida = true}) => Notificacao(
   dataEnvio: '2026-10-28T10:00:00Z',
 );
 
+Notificacao _notificacaoSemTexto() => Notificacao(
+  id: 8,
+  idAgendamento: 108,
+  tipo: 'lembrete_antecipado',
+  titulo: null,
+  mensagem: '',
+  lida: false,
+  dataEnvio: '2026-10-28T14:21:11.000Z',
+);
+
 void main() {
   testWidgets('cabeçalho usa azul escuro e foreground branco', (tester) async {
     await tester.pumpWidget(
@@ -103,6 +113,26 @@ void main() {
     expect(lida.color, isNotNull);
     expect(naoLida.color, isNull);
     expect(find.byType(Divider), findsOneWidget);
+  });
+
+  testWidgets('usa título padrão e formata data para o horário local', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: TelaNotificacoes(
+          tokenJwt: _tokenPaciente(),
+          service: _NotificacaoServiceFake([_notificacaoSemTexto()]),
+          armazenamento: _ArmazenamentoLocalFake(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Notificação'), findsOneWidget);
+    expect(find.textContaining('Enviado em: '), findsOneWidget);
+    expect(find.textContaining('2026-10-28T'), findsNothing);
   });
 
   testWidgets('dispensar remove da lista e mantém dispensada ao reabrir', (

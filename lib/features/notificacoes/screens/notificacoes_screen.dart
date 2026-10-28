@@ -4,6 +4,13 @@ import 'package:projeto_final/core/auth/sessao.dart';
 import 'package:projeto_final/core/storage/armazenamento_local.dart';
 import 'package:projeto_final/services/notificacao_service.dart';
 import 'package:projeto_final/core/models/notificacoes.dart';
+import 'package:intl/intl.dart';
+
+String formatarDataNotificacao(String? iso) {
+  final data = DateTime.tryParse(iso ?? '')?.toLocal();
+  if (data == null) return '';
+  return DateFormat('dd/MM/yyyy HH:mm').format(data);
+}
 
 class TelaNotificacoes extends StatefulWidget {
   final String tokenJwt; // Passe o token do usuário logado para a tela
@@ -123,10 +130,11 @@ class _TelaNotificacoesState extends State<TelaNotificacoes> {
                   : mensagem.isNotEmpty
                   ? mensagem
                   : 'Notificação';
+              final dataFormatada = formatarDataNotificacao(item.dataEnvio);
               final detalhes = <Widget>[
                 if (titulo.isNotEmpty && mensagem.isNotEmpty) Text(mensagem),
-                if (item.dataEnvio.isNotEmpty)
-                  Text('Enviado em: ${item.dataEnvio}'),
+                if (dataFormatada.isNotEmpty)
+                  Text('Enviado em: $dataFormatada'),
               ];
 
               return Dismissible(
