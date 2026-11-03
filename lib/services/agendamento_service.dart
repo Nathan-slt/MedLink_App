@@ -43,8 +43,9 @@ class AgendamentoService {
   Future<List<Especialidade>> listarEspecialidades() async {
     final resposta = await _api.get('/especialidades');
     try {
-      final especialidades =
-          _lista(resposta).map(Especialidade.fromJson).toList();
+      final especialidades = _lista(
+        resposta,
+      ).map(Especialidade.fromJson).toList();
       especialidades.sort((a, b) => a.nome.compareTo(b.nome));
       return especialidades;
     } on FormatException {
@@ -66,11 +67,12 @@ class AgendamentoService {
       },
     );
     try {
-      final profissionais = _lista(resposta)
-          .map(Profissional.fromJson)
-          .where((profissional) => profissional.ativo)
-          .toList()
-        ..sort((a, b) => a.nome.compareTo(b.nome));
+      final profissionais =
+          _lista(resposta)
+              .map(Profissional.fromJson)
+              .where((profissional) => profissional.ativo)
+              .toList()
+            ..sort((a, b) => a.nome.compareTo(b.nome));
       return profissionais;
     } on FormatException {
       throw const ApiException('Resposta inesperada do servidor.');
@@ -84,14 +86,17 @@ class AgendamentoService {
   ) async {
     final resposta = await _api.get('/horarios/profissional/$idProfissional');
     try {
-      final horarios = _lista(resposta)
-          .map(HorarioDisponivel.fromJson)
-          .where((horario) => horario.disponivel)
-          .toList()
-        ..sort((a, b) {
-          final porData = a.data.compareTo(b.data);
-          return porData != 0 ? porData : a.horaInicio.compareTo(b.horaInicio);
-        });
+      final horarios =
+          _lista(resposta)
+              .map(HorarioDisponivel.fromJson)
+              .where((horario) => horario.disponivel)
+              .toList()
+            ..sort((a, b) {
+              final porData = a.data.compareTo(b.data);
+              return porData != 0
+                  ? porData
+                  : a.horaInicio.compareTo(b.horaInicio);
+            });
       return horarios;
     } on FormatException {
       throw const ApiException('Resposta inesperada do servidor.');
@@ -134,14 +139,25 @@ class AgendamentoService {
       _api.get('/agendamentos/paciente/$idPaciente'),
       _api.get('/profissionais'),
       _api.get('/clinica'),
-      _api.get('/fila/historico'),
     ]);
 
     try {
-      final agendamentos =
-          _lista(respostas[0]).map(Agendamento.fromJson).toList();
+      final agendamentos = _lista(
+        respostas[0],
+      ).map(Agendamento.fromJson).toList();
       final agendamentosFinalizadosNaFila = <int>{};
-      for (final fila in _lista(respostas[3])) {
+      dynamic historicoFila;
+      try {
+        historicoFila = await _api.get('/fila/historico');
+      } on ApiException catch (erro) {
+        if (erro.statusCode != 404) rethrow;
+        debugPrint(
+          'A API ainda não disponibiliza /fila/historico. '
+          'Consultas finalizadas serão identificadas pelo status do agendamento.',
+        );
+      }
+
+      for (final fila in _lista(historicoFila ?? const [])) {
         final idAgendamento = fila['id_agendamento'];
         final statusFila = fila['status_fila'];
         if (idAgendamento is! int || statusFila is! String) {
@@ -182,8 +198,9 @@ class AgendamentoService {
         return AgendamentoDetalhado(
           agendamento: agendamento,
           medico: profissional?['nome'] as String? ?? 'Profissional',
-          especialidade:
-              especialidade is Map ? (especialidade['nome'] as String?) ?? '' : '',
+          especialidade: especialidade is Map
+              ? (especialidade['nome'] as String?) ?? ''
+              : '',
           clinica: clinica?['nome'] as String? ?? 'Clínica',
           endereco: clinica?['endereco'] as String?,
         );

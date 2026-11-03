@@ -83,6 +83,64 @@ void main() {
     },
   );
 
+  test(
+    'continua listando agendamentos se a API ainda não tem a rota do histórico',
+    () async {
+      AuthService.instance = _AuthServiceFake();
+      final service = AgendamentoService(
+        api: ApiClient(
+          client: MockClient((request) async {
+            final path = request.url.path;
+            if (path == '/api/fila/historico') {
+              return http.Response('{"erro":"Não encontrado."}', 404);
+            }
+
+            final corpo = switch (path) {
+              '/api/agendamentos/paciente/9' => [
+                {
+                  'id_agendamento': 21,
+                  'id_paciente': 9,
+                  'id_profissional': 3,
+                  'id_clinica': 7,
+                  'id_horario': 11,
+                  'data_hora_consulta': '2026-10-27T13:00:00.000Z',
+                  'status': 'agendado',
+                  'criado_por_usuario': 1,
+                },
+              ],
+              '/api/profissionais' => [
+                {
+                  'id_profissional': 3,
+                  'nome': 'Dra. Ana',
+                  'Especialidade': {'nome': 'Clínica geral'},
+                },
+              ],
+              '/api/clinica' => [
+                {
+                  'id_clinica': 7,
+                  'nome': 'Clínica MedLink',
+                  'endereco': 'Rua Central, 100',
+                },
+              ],
+              _ => throw StateError('Rota inesperada: $path'),
+            };
+            return http.Response(
+              jsonEncode(corpo),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }),
+          baseUrl: 'http://teste/api',
+        ),
+      );
+
+      final agendamentos = await service.listarMeus();
+
+      expect(agendamentos.single.status, StatusAgendamento.agendado);
+      expect(agendamentos.single.medico, 'Dra. Ana');
+    },
+  );
+
   test('lista clínicas da API em ordem alfabética', () async {
     late http.Request requisicao;
     final service = AgendamentoService(
