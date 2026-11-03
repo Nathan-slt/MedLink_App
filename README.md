@@ -23,4 +23,6 @@ flutter run --dart-define=API_URL=http://10.0.2.2:3000/api   # emulador Android 
 - `services/perfil_service.dart` — dados do perfil e troca de senha.
 - `services/fila_service.dart` — posição autenticada do paciente em
   `/fila/minha-posicao`; a aba consulta a API a cada 5 segundos enquanto aberta.
+  O histórico da fila finalizada é obtido por `/fila/historico` e associado aos
+  agendamentos pelo `id_agendamento`.
 - Se a API responder 401, o app encerra a sessão e volta ao login.

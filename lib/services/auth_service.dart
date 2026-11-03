@@ -6,7 +6,6 @@ import 'package:projeto_final/core/network/api_exception.dart';
 import 'package:projeto_final/core/storage/armazenamento_local.dart';
 import 'package:projeto_final/core/utils/mascaras.dart';
 import 'package:projeto_final/core/utils/validadores.dart';
-import 'package:projeto_final/services/agendamento_service.dart';
 import 'package:projeto_final/services/notificacao_push_service.dart';
 
 /// Login, logout e restauração da sessão.
@@ -137,7 +136,6 @@ class AuthService {
 
     _sessao = null;
     _api.token = null;
-    AgendamentoService.limparConclusoesDaSessao();
     try {
       await _armazenamento.limparTudo();
     } catch (_) {
@@ -149,7 +147,6 @@ class AuthService {
   Future<void> _iniciarSessao(Sessao sessao) async {
     _sessao = sessao;
     _api.token = sessao.token;
-    AgendamentoService.limparConclusoesDaSessao();
     await _armazenamento.salvarToken(sessao.token);
     await _registrarPushSemBloquearSessao();
   }

@@ -60,6 +60,19 @@ class Agendamento {
     this.status = StatusAgendamento.agendado,
   });
 
+  Agendamento copyWith({StatusAgendamento? status}) {
+    return Agendamento(
+      idAgendamento: idAgendamento,
+      idPaciente: idPaciente,
+      idProfissional: idProfissional,
+      idClinica: idClinica,
+      idHorario: idHorario,
+      dataHoraConsulta: dataHoraConsulta,
+      criadoPorUsuario: criadoPorUsuario,
+      status: status ?? this.status,
+    );
+  }
+
   factory Agendamento.fromJson(Map<String, dynamic> json) {
     return Agendamento(
       idAgendamento: json['id_agendamento'] as int,

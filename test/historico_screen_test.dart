@@ -64,10 +64,7 @@ AgendamentoDetalhado _agendamentoFinalizadoPelaApi({
 
 void main() {
   final servicoOriginal = AgendamentoService.instance;
-  tearDown(() {
-    AgendamentoService.instance = servicoOriginal;
-    AgendamentoService.limparConclusoesDaSessao();
-  });
+  tearDown(() => AgendamentoService.instance = servicoOriginal);
 
   Future<void> selecionarPeriodo(WidgetTester tester, String periodo) async {
     await tester.tap(find.byIcon(Icons.filter_list));
@@ -123,34 +120,6 @@ void main() {
     expect(find.text('Atrasadas'), findsNothing);
     expect(tester.takeException(), isNull);
   });
-
-  testWidgets(
-    'inclui no histórico a consulta finalizada nesta sessão mesmo se a API '
-    'ainda retornar agendada',
-    (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 3;
-      addTearDown(tester.view.reset);
-
-      final consultaDeHoje = _criarAgendamento(
-        id: 20,
-        medico: 'Dra. Consulta finalizada hoje',
-        data: DateTime.now().subtract(const Duration(minutes: 5)),
-        status: StatusAgendamento.agendado,
-      );
-      AgendamentoService.instance = _AgendamentoServiceFake([consultaDeHoje]);
-      AgendamentoService.marcarConcluidaNaSessao(20);
-
-      await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.lightTheme, home: const HistoricoScreen()),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Dra. Consulta finalizada hoje'), findsOneWidget);
-      expect(find.text('Atrasada - não realizada'), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
 
   testWidgets('agrupa consultas por dia e filtra por médico', (tester) async {
     tester.view.physicalSize = const Size(1080, 3600);

@@ -161,10 +161,17 @@ void main() {
 
     expect(find.byKey(const ValueKey('agendamento-card-4')), findsWidgets);
 
+    agendamentos[0] = AgendamentoDetalhado(
+      agendamento: consultaAtual.agendamento.copyWith(
+        status: StatusAgendamento.realizado,
+      ),
+      medico: consultaAtual.medico,
+      especialidade: consultaAtual.especialidade,
+      clinica: consultaAtual.clinica,
+    );
     AgendamentoService.notificarConclusaoConsulta();
     await tester.pumpAndSettle();
 
-    expect(AgendamentoService.foiConcluidaNaSessao(4), isTrue);
     expect(find.byKey(const ValueKey('agendamento-card-4')), findsNothing);
     expect(find.byKey(const ValueKey('agendamento-card-5')), findsWidgets);
   });

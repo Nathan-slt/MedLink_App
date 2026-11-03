@@ -19,24 +19,10 @@ class AgendamentoService {
   /// Sobe a cada mudança (criar, cancelar, remarcar). As telas que mostram
   /// agendamentos escutam isto e recarregam.
   static final ValueNotifier<int> alteracoes = ValueNotifier<int>(0);
-  static final ValueNotifier<int> conclusoes = ValueNotifier<int>(0);
-  static final Set<int> _concluidasNaSessao = {};
 
   static void notificarAlteracao() => alteracoes.value++;
 
-  static void marcarConcluidaNaSessao(int idAgendamento) {
-    _concluidasNaSessao.add(idAgendamento);
-  }
-
-  static bool foiConcluidaNaSessao(int idAgendamento) =>
-      _concluidasNaSessao.contains(idAgendamento);
-
-  static void limparConclusoesDaSessao() => _concluidasNaSessao.clear();
-
-  static void notificarConclusaoConsulta() {
-    conclusoes.value++;
-    notificarAlteracao();
-  }
+  static void notificarConclusaoConsulta() => notificarAlteracao();
 
   final ApiClient _api;
 
@@ -136,7 +122,8 @@ class AgendamentoService {
   ///
   /// O backend devolve `/agendamentos/paciente/:id` só com IDs. Para mostrar
   /// nome do médico, especialidade e clínica, busca também `/profissionais`
-  /// (que já traz a especialidade) e `/clinica`, e junta tudo aqui.
+  /// (que já traz a especialidade), `/clinica` e o histórico da fila, que
+  /// confirma consultas finalizadas pelo atendimento.
   Future<List<AgendamentoDetalhado>> listarMeus() async {
     final idPaciente = AuthService.instance.sessao?.idPaciente;
     if (idPaciente == null) {
@@ -147,11 +134,35 @@ class AgendamentoService {
       _api.get('/agendamentos/paciente/$idPaciente'),
       _api.get('/profissionais'),
       _api.get('/clinica'),
+      _api.get('/fila/historico'),
     ]);
 
     try {
       final agendamentos =
           _lista(respostas[0]).map(Agendamento.fromJson).toList();
+      final agendamentosFinalizadosNaFila = <int>{};
+      for (final fila in _lista(respostas[3])) {
+        final idAgendamento = fila['id_agendamento'];
+        final statusFila = fila['status_fila'];
+        if (idAgendamento is! int || statusFila is! String) {
+          throw const FormatException('Registro de fila inválido.');
+        }
+
+        final statusNormalizado = statusFila
+            .trim()
+            .toLowerCase()
+            .replaceAll(RegExp('[áàâãä]'), 'a')
+            .replaceAll(RegExp('[éèêë]'), 'e')
+            .replaceAll(RegExp('[íìîï]'), 'i')
+            .replaceAll(RegExp('[óòôõö]'), 'o')
+            .replaceAll(RegExp('[úùûü]'), 'u')
+            .replaceAll(RegExp(r'[\s-]+'), '_');
+        if (statusNormalizado == 'finalizado' ||
+            statusNormalizado == 'finalizada') {
+          agendamentosFinalizadosNaFila.add(idAgendamento);
+        }
+      }
+
       final profissionais = {
         for (final p in _lista(respostas[1])) p['id_profissional'] as int: p,
       };
@@ -160,12 +171,16 @@ class AgendamentoService {
       };
 
       final detalhados = agendamentos.map((a) {
+        final agendamento =
+            agendamentosFinalizadosNaFila.contains(a.idAgendamento)
+            ? a.copyWith(status: StatusAgendamento.realizado)
+            : a;
         final profissional = profissionais[a.idProfissional];
         final especialidade = profissional?['Especialidade'];
         final clinica = clinicas[a.idClinica];
 
         return AgendamentoDetalhado(
-          agendamento: a,
+          agendamento: agendamento,
           medico: profissional?['nome'] as String? ?? 'Profissional',
           especialidade:
               especialidade is Map ? (especialidade['nome'] as String?) ?? '' : '',

@@ -32,10 +32,7 @@ class Consulta {
     this.atrasada = false,
   });
 
-  factory Consulta.fromAgendamento(
-    AgendamentoDetalhado agendamento, {
-    bool concluidaNaSessao = false,
-  }) {
+  factory Consulta.fromAgendamento(AgendamentoDetalhado agendamento) {
     return Consulta(
       medico: agendamento.medico,
       especialidade: agendamento.especialidade,
@@ -44,13 +41,8 @@ class Consulta {
       endereco: agendamento.endereco ?? 'Endereço não informado',
       data: agendamento.data,
       tipoLocal: '',
-      finalizada:
-          agendamento.status == StatusAgendamento.realizado ||
-          concluidaNaSessao,
-      atrasada:
-          !concluidaNaSessao &&
-          agendamento.ativo &&
-          agendamento.data.isBefore(DateTime.now()),
+      finalizada: agendamento.status == StatusAgendamento.realizado,
+      atrasada: agendamento.ativo && agendamento.data.isBefore(DateTime.now()),
     );
   }
 }

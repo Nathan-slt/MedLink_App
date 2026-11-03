@@ -171,14 +171,7 @@ class _HistoricoScreenState extends State<HistoricoScreen> {
                 (agendamento) =>
                     agendamento.status != StatusAgendamento.cancelado,
               )
-              .map(
-                (agendamento) => Consulta.fromAgendamento(
-                  agendamento,
-                  concluidaNaSessao: AgendamentoService.foiConcluidaNaSessao(
-                    agendamento.agendamento.idAgendamento,
-                  ),
-                ),
-              )
+              .map(Consulta.fromAgendamento)
               .toList()
             ..sort((a, b) => b.data.compareTo(a.data));
 

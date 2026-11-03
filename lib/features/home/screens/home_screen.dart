@@ -21,7 +21,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<AgendamentoDetalhado> _consultas = const [];
-  final Set<int> _concluidasNaSessao = {};
   int _carregamentoAtual = 0;
   bool _carregando = true;
   String? _erro;
@@ -30,7 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     AgendamentoService.alteracoes.addListener(_carregar);
-    AgendamentoService.conclusoes.addListener(_marcarConsultaAtualConcluida);
     _carregar();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (Firebase.apps.isNotEmpty) {
@@ -42,38 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     AgendamentoService.alteracoes.removeListener(_carregar);
-    AgendamentoService.conclusoes.removeListener(_marcarConsultaAtualConcluida);
     super.dispose();
-  }
-
-  void _marcarConsultaAtualConcluida() {
-    final agora = DateTime.now();
-    final consultasDoDia = _consultasAtivas
-        .where((consulta) => DateUtils.isSameDay(consulta.data, agora))
-        .toList()
-      ..sort(
-        (a, b) => a.data
-            .difference(agora)
-            .inMicroseconds
-            .abs()
-            .compareTo(
-              b.data.difference(agora).inMicroseconds.abs(),
-            ),
-      );
-    final consulta = consultasDoDia.isNotEmpty
-        ? consultasDoDia.first
-        : _proxima;
-    if (consulta == null ||
-        _concluidasNaSessao.contains(consulta.agendamento.idAgendamento)) {
-      return;
-    }
-
-    setState(() {
-      _concluidasNaSessao.add(consulta.agendamento.idAgendamento);
-    });
-    AgendamentoService.marcarConcluidaNaSessao(
-      consulta.agendamento.idAgendamento,
-    );
   }
 
   Future<void> _carregar() async {
@@ -99,16 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  List<AgendamentoDetalhado> get _consultasAtivas => _consultas
-      .where(
-        (consulta) =>
-            consulta.ativo &&
-            !_concluidasNaSessao.contains(consulta.agendamento.idAgendamento) &&
-            !AgendamentoService.foiConcluidaNaSessao(
-              consulta.agendamento.idAgendamento,
-            ),
-      )
-      .toList();
+  List<AgendamentoDetalhado> get _consultasAtivas =>
+      _consultas.where((consulta) => consulta.ativo).toList();
 
   List<AgendamentoDetalhado> get _consultasAtivasEFuturas {
     final agora = DateTime.now();
