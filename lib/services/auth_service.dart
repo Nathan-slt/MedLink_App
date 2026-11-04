@@ -11,8 +11,8 @@ import 'package:projeto_final/services/notificacao_push_service.dart';
 /// Login, logout e restauração da sessão.
 class AuthService {
   AuthService({ApiClient? api, ArmazenamentoLocal? armazenamento})
-      : _api = api ?? ApiClient.instance,
-        _armazenamento = armazenamento ?? ArmazenamentoLocal();
+    : _api = api ?? ApiClient.instance,
+      _armazenamento = armazenamento ?? ArmazenamentoLocal();
 
   /// Instância usada pelo app. Pode ser trocada em testes.
   static AuthService instance = AuthService();
@@ -58,9 +58,7 @@ class AuthService {
 
     // O app é do paciente. Equipe da clínica usa o sistema web.
     if (sessao.papel != PapelUsuario.paciente) {
-      throw const ApiException(
-        'Este aplicativo é exclusivo para pacientes.',
-      );
+      throw const ApiException('Este aplicativo é exclusivo para pacientes.');
     }
     if (sessao.idPaciente == null) {
       throw const ApiException(
@@ -97,6 +95,34 @@ class AuthService {
         'cpf': cpf.trim(),
         'data_nascimento': formatarDataIso(dataNascimento),
         'telefone': telefone.trim(),
+      },
+      autenticado: false,
+    );
+  }
+
+  /// POST /usuarios/recuperacao/codigo
+  ///
+  /// A resposta é genérica para não revelar se o e-mail está cadastrado.
+  Future<void> solicitarCodigoRecuperacao({required String email}) async {
+    await _api.post(
+      '/usuarios/recuperacao/codigo',
+      corpo: {'email': email.trim().toLowerCase()},
+      autenticado: false,
+    );
+  }
+
+  /// POST /usuarios/recuperacao/redefinir
+  Future<void> redefinirSenha({
+    required String email,
+    required String codigo,
+    required String novaSenha,
+  }) async {
+    await _api.post(
+      '/usuarios/recuperacao/redefinir',
+      corpo: {
+        'email': email.trim().toLowerCase(),
+        'codigo': codigo.trim(),
+        'novaSenha': novaSenha,
       },
       autenticado: false,
     );
@@ -155,7 +181,9 @@ class AuthService {
     try {
       await PushNotificationService.instance.registrarDispositivo();
     } catch (erro, stackTrace) {
-      debugPrint('Falha ao registrar o dispositivo para notificações push: $erro');
+      debugPrint(
+        'Falha ao registrar o dispositivo para notificações push: $erro',
+      );
       debugPrintStack(stackTrace: stackTrace);
     }
   }

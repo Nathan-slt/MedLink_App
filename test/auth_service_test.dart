@@ -30,11 +30,13 @@ void main() {
           dataNascimento: DateTime(1990, 1, 1),
           telefone: '12997756565',
         ),
-        throwsA(isA<ApiException>().having(
-          (erro) => erro.mensagem,
-          'mensagem',
-          'CPF inválido.',
-        )),
+        throwsA(
+          isA<ApiException>().having(
+            (erro) => erro.mensagem,
+            'mensagem',
+            'CPF inválido.',
+          ),
+        ),
       );
     }
 
@@ -65,5 +67,56 @@ void main() {
     expect(requisicao.method, 'POST');
     expect(requisicao.url.path, '/api/usuarios/cadastro');
     expect(jsonDecode(requisicao.body)['cpf'], '529.982.247-25');
+  });
+
+  test('solicita código de recuperação sem autenticação', () async {
+    late http.Request requisicao;
+    final service = AuthService(
+      api: ApiClient(
+        client: MockClient((request) async {
+          requisicao = request;
+          return http.Response('{"mensagem":"Código enviado."}', 200);
+        }),
+        baseUrl: 'http://teste/api',
+      ),
+    );
+
+    await service.solicitarCodigoRecuperacao(email: ' Paciente@Exemplo.com ');
+
+    expect(requisicao.method, 'POST');
+    expect(requisicao.url.path, '/api/usuarios/recuperacao/codigo');
+    expect(jsonDecode(requisicao.body), {'email': 'paciente@exemplo.com'});
+    expect(requisicao.headers.containsKey('authorization'), isFalse);
+  });
+
+  test('envia código e nova senha na redefinição sem autenticação', () async {
+    late http.Request requisicao;
+    final service = AuthService(
+      api: ApiClient(
+        client: MockClient((request) async {
+          requisicao = request;
+          return http.Response(
+            '{"mensagem":"Senha alterada com sucesso."}',
+            200,
+          );
+        }),
+        baseUrl: 'http://teste/api',
+      ),
+    );
+
+    await service.redefinirSenha(
+      email: ' Paciente@Exemplo.com ',
+      codigo: ' 012345 ',
+      novaSenha: 'NovaSenha123',
+    );
+
+    expect(requisicao.method, 'POST');
+    expect(requisicao.url.path, '/api/usuarios/recuperacao/redefinir');
+    expect(jsonDecode(requisicao.body), {
+      'email': 'paciente@exemplo.com',
+      'codigo': '012345',
+      'novaSenha': 'NovaSenha123',
+    });
+    expect(requisicao.headers.containsKey('authorization'), isFalse);
   });
 }
