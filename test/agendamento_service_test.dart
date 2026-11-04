@@ -61,7 +61,7 @@ void main() {
                 },
               ],
               '/api/fila/historico' => [
-                {'id_agendamento': 20, 'status_fila': 'finalizado'},
+                {'id_agendamento': 20, 'status': 'finalizado'},
               ],
               _ => throw StateError('Rota inesperada: ${request.url.path}'),
             };

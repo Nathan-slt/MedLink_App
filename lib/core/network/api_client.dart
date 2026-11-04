@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:projeto_final/core/config/api_config.dart';
 import 'package:projeto_final/core/network/api_exception.dart';
+import 'package:flutter/foundation.dart';
 
 /// Cliente HTTP único do app.
 ///
@@ -97,13 +98,17 @@ class ApiClient {
     };
 
     final http.Response resposta;
+    final sw = Stopwatch()..start();
     try {
       resposta = await requisicao.timeout(_timeout);
+      debugPrint('$metodo ${uri.path} -> ${resposta.statusCode} (${sw.elapsedMilliseconds} ms)');
     } on TimeoutException {
+      debugPrint('$metodo ${uri.path} TIMEOUT após ${sw.elapsedMilliseconds} ms (limite ${_timeout.inSeconds}s)');
       throw const ApiException(
         'O servidor demorou para responder. Tente novamente.',
       );
-    } catch (_) {
+    } catch (erro) {
+      debugPrint('$metodo ${uri.path} FALHOU após ${sw.elapsedMilliseconds} ms: $erro');
       // ClientException/SocketException/erro de TLS: não chegou ao servidor.
       throw const ApiException(
         'Sem conexão com o servidor. Verifique sua internet.',

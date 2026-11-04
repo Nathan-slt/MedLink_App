@@ -129,40 +129,43 @@ class AgendamentoService {
   /// nome do médico, especialidade e clínica, busca também `/profissionais`
   /// (que já traz a especialidade), `/clinica` e o histórico da fila, que
   /// confirma consultas finalizadas pelo atendimento.
+  ///
+  /// O histórico da fila é só um complemento: se essa chamada falhar, a lista
+  /// continua funcionando (as consultas finalizadas apenas deixam de ser
+  /// marcadas como realizadas pela fila).
   Future<List<AgendamentoDetalhado>> listarMeus() async {
     final idPaciente = AuthService.instance.sessao?.idPaciente;
     if (idPaciente == null) {
       throw const ApiException('Sessão inválida. Faça login novamente.');
     }
 
+    // As quatro chamadas rodam ao mesmo tempo. A do histórico nunca derruba
+    // as outras: se falhar, vira uma lista vazia.
     final respostas = await Future.wait<dynamic>([
       _api.get('/agendamentos/paciente/$idPaciente'),
       _api.get('/profissionais'),
       _api.get('/clinica'),
+      _api.get('/fila/historico').catchError((Object erro) {
+        debugPrint('Não foi possível carregar /fila/historico: $erro');
+        return const [];
+      }),
     ]);
 
     try {
       final agendamentos = _lista(
         respostas[0],
       ).map(Agendamento.fromJson).toList();
-      final agendamentosFinalizadosNaFila = <int>{};
-      dynamic historicoFila;
-      try {
-        historicoFila = await _api.get('/fila/historico');
-      } on ApiException catch (erro) {
-        if (erro.statusCode != 404) rethrow;
-        debugPrint(
-          'A API ainda não disponibiliza /fila/historico. '
-          'Consultas finalizadas serão identificadas pelo status do agendamento.',
-        );
-      }
 
-      for (final fila in _lista(historicoFila ?? const [])) {
+      final agendamentosFinalizadosNaFila = <int>{};
+      final historicoFila = respostas[3] is List
+          ? _lista(respostas[3])
+          : const <Map<String, dynamic>>[];
+
+      for (final fila in historicoFila) {
         final idAgendamento = fila['id_agendamento'];
-        final statusFila = fila['status_fila'];
-        if (idAgendamento is! int || statusFila is! String) {
-          throw const FormatException('Registro de fila inválido.');
-        }
+        final statusFila = fila['status_fila'] ?? fila['status'];
+        // registro incompleto: ignora e segue para o próximo
+        if (idAgendamento is! int || statusFila is! String) continue;
 
         final statusNormalizado = statusFila
             .trim()
