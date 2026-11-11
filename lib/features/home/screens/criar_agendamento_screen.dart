@@ -41,7 +41,7 @@ class _CriarAgendamentoScreenState extends State<CriarAgendamentoScreen> {
   List<Profissional> _profissionais = const [];
   List<HorarioDisponivel> _horarios = const [];
   bool _carregandoClinicas = true;
-  bool _carregandoEspecialidades = true;
+  bool _carregandoEspecialidades = false;
   bool _carregandoProfissionais = false;
   bool _carregandoHorarios = false;
   bool _enviando = false;
@@ -54,7 +54,6 @@ class _CriarAgendamentoScreenState extends State<CriarAgendamentoScreen> {
   void initState() {
     super.initState();
     _carregarClinicas();
-    _carregarEspecialidades();
   }
 
   @override
@@ -85,22 +84,23 @@ class _CriarAgendamentoScreenState extends State<CriarAgendamentoScreen> {
     }
   }
 
-  Future<void> _carregarEspecialidades() async {
+  Future<void> _carregarEspecialidades(int idClinica) async {
     setState(() {
       _carregandoEspecialidades = true;
       _erroEspecialidades = null;
+      _especialidades = const [];
     });
 
     try {
-      final especialidades =
-          await AgendamentoService.instance.listarEspecialidades();
-      if (!mounted) return;
+      final especialidades = await AgendamentoService.instance
+          .listarEspecialidades(idClinica: idClinica);
+      if (!mounted || _idClinica != idClinica) return;
       setState(() {
         _especialidades = especialidades;
         _carregandoEspecialidades = false;
       });
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || _idClinica != idClinica) return;
       setState(() {
         _erroEspecialidades = e.mensagem;
         _carregandoEspecialidades = false;
@@ -177,13 +177,21 @@ class _CriarAgendamentoScreenState extends State<CriarAgendamentoScreen> {
   }
 
   void _selecionarClinica(String? valor) {
+    final idClinica = int.tryParse(valor ?? '');
     setState(() {
-      _idClinica = int.tryParse(valor ?? '');
+      _idClinica = idClinica;
+      _idEspecialidade = null;
+      _especialidades = const [];
+      _carregandoEspecialidades = idClinica != null;
+      _erroEspecialidades = null;
       _idProfissional = null;
       _profissionais = const [];
       _horarios = const [];
       _horarioSelecionado = null;
     });
+    if (idClinica != null) {
+      _carregarEspecialidades(idClinica);
+    }
     _carregarProfissionais();
   }
 
@@ -362,7 +370,9 @@ class _CriarAgendamentoScreenState extends State<CriarAgendamentoScreen> {
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: _carregarClinicas,
-                          child: const Text('Tentar carregar clínicas novamente'),
+                          child: const Text(
+                            'Tentar carregar clínicas novamente',
+                          ),
                         ),
                       ),
                     ],
@@ -391,7 +401,9 @@ class _CriarAgendamentoScreenState extends State<CriarAgendamentoScreen> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: _carregarEspecialidades,
+                          onPressed: _idClinica == null
+                              ? null
+                              : () => _carregarEspecialidades(_idClinica!),
                           child: const Text(
                             'Tentar carregar especialidades novamente',
                           ),
@@ -406,8 +418,8 @@ class _CriarAgendamentoScreenState extends State<CriarAgendamentoScreen> {
                       key: ValueKey('profissional-$_idClinica-$_idEspecialidade'),
                       rotulo: 'Profissional',
                       hint: _idClinica == null || _idEspecialidade == null
-                        ? 'Selecione clínica e especialidade'
-                        : _carregandoProfissionais
+                          ? 'Selecione clínica e especialidade'
+                          : _carregandoProfissionais
                           ? 'Carregando profissionais...'
                           : _erroProfissionais ?? 'Selecione o profissional',
                       mensagemErro: 'Selecione o profissional',

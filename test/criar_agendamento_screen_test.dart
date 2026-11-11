@@ -26,8 +26,13 @@ class _AgendamentoServiceFake extends AgendamentoService {
     Clinica(idClinica: 2, nome: 'Clínica Sul'),
   ];
 
+  int? clinicaConsultada;
+
   @override
-  Future<List<Especialidade>> listarEspecialidades() async {
+  Future<List<Especialidade>> listarEspecialidades({
+    required int idClinica,
+  }) async {
+    clinicaConsultada = idClinica;
     if (falharEspecialidades) {
       throw const ApiException('Falha ao carregar especialidades.');
     }
@@ -163,7 +168,13 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Selecione a clínica'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clínica Centro').last);
+    await tester.pumpAndSettle();
+
     expect(find.text('Falha ao carregar especialidades.'), findsOneWidget);
+    expect(servicoFake.clinicaConsultada, 1);
     expect(
       find.text('Tentar carregar especialidades novamente'),
       findsOneWidget,

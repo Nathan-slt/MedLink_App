@@ -40,8 +40,13 @@ class AgendamentoService {
     }
   }
 
-  Future<List<Especialidade>> listarEspecialidades() async {
-    final resposta = await _api.get('/especialidades');
+  Future<List<Especialidade>> listarEspecialidades({
+    required int idClinica,
+  }) async {
+    final resposta = await _api.get(
+      '/especialidades',
+      query: {'id_clinica': '$idClinica'},
+    );
     try {
       final especialidades = _lista(
         resposta,

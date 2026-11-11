@@ -189,9 +189,10 @@ void main() {
       ),
     );
 
-    final especialidades = await service.listarEspecialidades();
+    final especialidades = await service.listarEspecialidades(idClinica: 7);
 
     expect(requisicao.url.path, '/api/especialidades');
+    expect(requisicao.url.queryParameters, {'id_clinica': '7'});
     expect(especialidades.map((especialidade) => especialidade.nome), [
       'Cardiologia',
       'Ortopedia',
